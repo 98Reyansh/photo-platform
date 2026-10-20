@@ -1,0 +1,6 @@
+@PhotoPlatform.Api_HostAddress = http://localhost:5080
+
+GET {{PhotoPlatform.Api_HostAddress}}/api/v1/health
+Accept: application/json
+
+###

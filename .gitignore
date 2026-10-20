@@ -1,0 +1,22 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# Local environment overrides. .env.example and .env.development are safe to keep.
+.env
+.env.local
+.env.*.local
+
+# OS and editors
+.DS_Store
+.idea/
+*.log
