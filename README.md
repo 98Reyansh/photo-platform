@@ -24,10 +24,13 @@ src/backend/PhotoPlatform.Infrastructure        EF Core persistence and future e
 src/backend/PhotoPlatform.Api                   ASP.NET Core Web API host
 src/frontend                                    Vite + React + TypeScript app
 docs/ARCHITECTURE.md                            Project boundaries and reference rules
-docs/DATABASE-DESIGN.md                         Tenant schema and migration
+docs/DATABASE-DESIGN.md                         Tenant schema, development migration, and test database
+docs/DEVELOPMENT-STANDARDS.md                   Repository and testing standards
+docs/CONFIGURATION.md                           Development and production configuration
+docs/SECURITY.md                                Error, logging, host, and tenancy rules
 ```
 
-`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Authentication and file uploads are not part of the current tasks.
+`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Authentication and file uploads are not part of the current tasks.
 
 ## Local URLs
 
@@ -166,11 +169,13 @@ After `database update`, inspect the schema:
 psql "host=localhost port=5432 dbname=photoplatform user=photoplatform" -c '\d "Tenants"'
 ```
 
-The initial migration is `20261020135016_InitialTenants`. It creates the `Tenants` table, the primary key, the status check, and the unique `IX_Tenants_Slug` index. Apply it only after the development database `photoplatform` exists. Do not point `database update` at another database.
+The initial migration is `20261020135016_InitialTenants`. It creates the `Tenants` table, the primary key, the status check, and the unique `IX_Tenants_Slug` index. That migration is already applied to the local development database `photoplatform`. Do not point `database update` at another database to recreate it.
 
 `GET /api/v1/health/database` returns HTTP 200 when PostgreSQL accepts a connection and HTTP 503 otherwise. The body uses `healthy` or `unhealthy` and does not include the connection string.
 
-Provider-specific tests run only when `PHOTO_PLATFORM_TEST_CONNECTION` is set. They skip when the variable is unset. See `docs/DATABASE-DESIGN.md`.
+Provider-specific tests run only when `PHOTO_PLATFORM_TEST_CONNECTION` is set. The database name in that connection string must be exactly `photo_platform_test`. The tests skip when the variable is unset, and they reject any other database before migrating or writing. See `docs/DATABASE-DESIGN.md`.
+
+`AllowedHosts` allows `localhost`, `127.0.0.1`, and `[::1]`. CORS allows only the two local Vite origins listed above. Details are in `docs/CONFIGURATION.md`.
 
 ## Troubleshooting
 

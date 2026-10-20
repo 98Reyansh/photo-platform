@@ -44,7 +44,7 @@ API endpoints return DTOs or other explicit response contracts. They do not retu
 
 ## Tenancy and photographs
 
-The product is planned as multi-tenant. Photographs are private by default: a photo is not public unless access is granted. The `Tenant` table stores a tenant record only. Request tenant resolution, authorization, and storage are later tasks. A Tenant row does not make multi-tenancy operational.
+The product is planned as multi-tenant. Photographs are private by default: a photo is not public unless access is granted. The `Tenant` table stores a tenant record only. Request tenant resolution, authorization, and storage are later tasks. A Tenant row does not make multi-tenancy operational. The intended resolution rule and the private-photo rule are recorded in `docs/SECURITY.md`. Development standards are in `docs/DEVELOPMENT-STANDARDS.md`. Configuration is in `docs/CONFIGURATION.md`.
 
 ## Postponed
 

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using PhotoPlatform.Domain.Entities;
 using PhotoPlatform.Infrastructure.Persistence;
 
@@ -12,6 +13,8 @@ public class PostgreSqlTenantTests
     public async Task Database_is_reachable()
     {
         var connectionString = Environment.GetEnvironmentVariable(ConnectionVariable);
+        PostgreSqlTestGuard.EnsureSafeToUse(connectionString);
+
         await using var context = CreateContext(connectionString!);
 
         Assert.True(await context.Database.CanConnectAsync());
@@ -21,8 +24,19 @@ public class PostgreSqlTenantTests
     public async Task Normalized_slug_is_unique_in_postgresql()
     {
         var connectionString = Environment.GetEnvironmentVariable(ConnectionVariable);
+        await ExecuteUniqueSlugCheck(
+            connectionString,
+            context => context.Database.MigrateAsync());
+    }
+
+    internal static async Task ExecuteUniqueSlugCheck(
+        string? connectionString,
+        Func<ApplicationDbContext, Task> migrate)
+    {
+        PostgreSqlTestGuard.EnsureSafeToUse(connectionString);
+
         await using var context = CreateContext(connectionString!);
-        await context.Database.MigrateAsync();
+        await migrate(context);
 
         var suffix = Guid.NewGuid().ToString("N");
         var slug = $"studio-{suffix}";
@@ -37,11 +51,43 @@ public class PostgreSqlTenantTests
 
     private static ApplicationDbContext CreateContext(string connectionString)
     {
+        PostgreSqlTestGuard.EnsureSafeToUse(connectionString);
+
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseNpgsql(connectionString)
             .Options;
 
         return new ApplicationDbContext(options);
+    }
+}
+
+public static class PostgreSqlTestGuard
+{
+    public const string RequiredDatabaseName = "photo_platform_test";
+
+    public static void EnsureSafeToUse(string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException($"{PostgreSqlTenantTests.ConnectionVariable} is not set.");
+        }
+
+        NpgsqlConnectionStringBuilder builder;
+        try
+        {
+            builder = new NpgsqlConnectionStringBuilder(connectionString);
+        }
+        catch (Exception)
+        {
+            throw new InvalidOperationException(
+                $"{PostgreSqlTenantTests.ConnectionVariable} is not a valid PostgreSQL connection string.");
+        }
+
+        if (!string.Equals(builder.Database, RequiredDatabaseName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"PostgreSQL tests only allow the database name '{RequiredDatabaseName}'.");
+        }
     }
 }
 

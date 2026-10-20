@@ -30,3 +30,13 @@ Status: Complete.
 - Do not add authentication, Identity, photo uploads, comments, likes, subscriptions, or tenant authorization.
 
 Identity and storage remain later tasks. Storing a Tenant row does not make multi-tenancy operational.
+
+## P0-04 — Standards and safety foundations
+
+Status: Implemented and verified.
+
+- Document development standards, configuration, and security rules.
+- Keep client error responses generic and keep exception messages out of logs.
+- Restrict PostgreSQL integration tests to the database name `photo_platform_test` before migration or writes.
+- Limit `AllowedHosts` to local loopback hosts. Leave the explicit CORS origins unchanged.
+- Do not add authentication, tenant middleware, photo endpoints, storage, packages, or migrations.

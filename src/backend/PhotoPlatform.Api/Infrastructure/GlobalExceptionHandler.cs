@@ -11,10 +11,10 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         CancellationToken cancellationToken)
     {
         logger.LogError(
-            exception,
-            "Unhandled exception processing {Method} {Path}",
+            "Unhandled exception processing {Method} {Path}. ExceptionType: {ExceptionType}",
             httpContext.Request.Method,
-            httpContext.Request.Path);
+            httpContext.Request.Path,
+            exception.GetType().Name);
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
 

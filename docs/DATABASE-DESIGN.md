@@ -36,7 +36,9 @@ Path: `src/backend/PhotoPlatform.Infrastructure/Persistence/Migrations/202610201
 
 `Up` creates `Tenants`, `PK_Tenants`, `CK_Tenants_Status`, and unique index `IX_Tenants_Slug`.
 
-Apply this migration only after the development database `photoplatform` exists. The commands are in the repository README. Do not point `database update` at another database.
+The migration has been applied to the local development database `photoplatform`. P0-04 does not run `database update` again and does not change that schema.
+
+Integration tests use a separate database named exactly `photo_platform_test`. The connection string is supplied only through `PHOTO_PLATFORM_TEST_CONNECTION`. `Normalized_slug_is_unique_in_postgresql` calls `MigrateAsync()` only after `NpgsqlConnectionStringBuilder` accepts that database name. A malformed connection string, a missing database name, or any other database name is rejected before migration and before writes. The development database is not the test database.
 
 ## Connection string
 
@@ -73,4 +75,4 @@ Domain tests cover required name and slug, maximum lengths, slug normalization, 
 
 Infrastructure tests build the EF model and assert required columns, lengths, the unique slug index, the status check, and the presence of `20261020135016_InitialTenants`. Those tests do not open PostgreSQL.
 
-`Database_is_reachable` and `Normalized_slug_is_unique_in_postgresql` run only when `PHOTO_PLATFORM_TEST_CONNECTION` is set. They skip when it is unset. The in-memory EF provider is not used.
+`Database_is_reachable` and `Normalized_slug_is_unique_in_postgresql` run only when `PHOTO_PLATFORM_TEST_CONNECTION` is set. They skip when it is unset. When it is set, both refuse to continue unless the parsed database name is exactly `photo_platform_test`. The in-memory EF provider is not used.
