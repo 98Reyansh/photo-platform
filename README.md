@@ -16,13 +16,17 @@ Do not substitute another .NET major version. If `dotnet --version` does not rep
 ## Repository layout
 
 ```text
-src/backend/PhotoPlatform.slnx          Solution for current and future backend projects
-src/backend/Directory.Build.props        Shared project defaults for backend projects
-src/backend/PhotoPlatform.Api            ASP.NET Core Web API host
-src/frontend                             Vite + React + TypeScript app
+src/backend/PhotoPlatform.slnx                 Solution for the backend projects
+src/backend/Directory.Build.props               Shared project defaults for backend projects
+src/backend/PhotoPlatform.Domain                Domain types and rules
+src/backend/PhotoPlatform.Application           Future use cases and DTOs
+src/backend/PhotoPlatform.Infrastructure        Future persistence and external services
+src/backend/PhotoPlatform.Api                   ASP.NET Core Web API host
+src/frontend                                    Vite + React + TypeScript app
+docs/ARCHITECTURE.md                            Project boundaries and reference rules
 ```
 
-Add future backend modules as projects under `src/backend` and include them in `PhotoPlatform.slnx`. `PhotoPlatform.Api` stays the HTTP host. This task does not add a database, authentication, or file uploads.
+`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. This task does not add a database, authentication, or file uploads.
 
 ## Local URLs
 
