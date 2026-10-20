@@ -1,3 +1,8 @@
 <Solution>
   <Project Path="PhotoPlatform.Api/PhotoPlatform.Api.csproj" />
+  <Project Path="PhotoPlatform.Application/PhotoPlatform.Application.csproj" />
+  <Project Path="PhotoPlatform.Domain.Tests/PhotoPlatform.Domain.Tests.csproj" />
+  <Project Path="PhotoPlatform.Domain/PhotoPlatform.Domain.csproj" />
+  <Project Path="PhotoPlatform.Infrastructure.Tests/PhotoPlatform.Infrastructure.Tests.csproj" />
+  <Project Path="PhotoPlatform.Infrastructure/PhotoPlatform.Infrastructure.csproj" />
 </Solution>
