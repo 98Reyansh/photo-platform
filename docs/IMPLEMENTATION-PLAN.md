@@ -40,3 +40,16 @@ Status: Implemented and verified.
 - Restrict PostgreSQL integration tests to the database name `photo_platform_test` before migration or writes.
 - Limit `AllowedHosts` to local loopback hosts. Leave the explicit CORS origins unchanged.
 - Do not add authentication, tenant middleware, photo endpoints, storage, packages, or migrations.
+
+## P0-05 — Authenticated studio membership
+
+Status: Implemented in code. A previously reported backend run passed 49 tests, with 0 failed and 0 skipped: 20 domain tests and 29 infrastructure tests. That report says the guarded PostgreSQL tests ran and exercised `20261024110924_AddStudioMembership` against `photo_platform_test`. The development database `photoplatform` was not migrated during the final read-only review. `PHOTO_PLATFORM_TEST_CONNECTION` was unset in that review environment, so those tests were not repeated then and are not rerun by this documentation cleanup.
+
+- ASP.NET Core Identity stores local accounts and password hashes (`docs/adr/0001-aspnet-core-identity.md`).
+- The browser session is the HTTP-only cookie `PhotoPlatform.Auth` (`docs/adr/0002-cookie-authentication.md`).
+- Development CORS allows credentials for the two existing Vite origins only. No origin was added.
+- State-changing requests require the `X-CSRF-TOKEN` header. The token is returned by `GET /api/v1/auth/csrf` and kept in frontend memory.
+- `POST /api/v1/auth/sign-in`, `POST /api/v1/auth/sign-out`, and `GET /api/v1/membership/current` are the membership API. Tenant selection comes from the authenticated membership.
+- Photo metadata, uploads, object storage, and public file URLs are not part of this milestone.
+
+The migration `20261024110924_AddStudioMembership` is generated. The previously reported guarded tests exercised it against `photo_platform_test`. It was not applied to `photoplatform` during the final read-only review, and this change does not run `database update`.

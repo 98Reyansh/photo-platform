@@ -1,6 +1,6 @@
 # Security
 
-This document records the foundations that are in place and the rules later features must follow. It does not enable authentication, photo storage, or tenant enforcement.
+This document records the foundations that are in place and the rules later features must follow. Studio membership authentication is implemented. Photo storage is not.
 
 ## Responses and logs
 
@@ -14,7 +14,21 @@ The log entry records the HTTP method, request path, and exception type. It does
 
 Allowed hosts and CORS behavior are described in `docs/CONFIGURATION.md`. Access was not broadened. Swagger UI and the OpenAPI document are available only in Development.
 
-The local API listens on HTTP so the browser can call it without a development certificate. HTTPS redirection is not enabled. Authentication is not enabled.
+The local API listens on HTTP so the browser can call it without a development certificate. HTTPS redirection is not enabled. Studio sign-in uses an HTTP-only cookie. The development CORS policy allows credentials for the two existing Vite origins only.
+
+## Authentication
+
+P0-05 implements local studio membership. ASP.NET Core Identity stores the account and hashes the password (`docs/adr/0001-aspnet-core-identity.md`). The browser session uses an HTTP-only cookie (`docs/adr/0002-cookie-authentication.md`).
+
+The authentication cookie is `PhotoPlatform.Auth`. It is HTTP-only, `SameSite=Lax`, and not persistent. In Development its `Secure` policy is `SameAsRequest`, because the local API is HTTP. Every other environment uses `Secure=Always`. Production must not reuse the development HTTP cookie. `localhost:5173` and `localhost:5080` are the same site, so `Lax` sends the cookie on credentialed fetch between them. `127.0.0.1:5173` calling `localhost:5080` is cross-site; `Lax` does not send the cookie there, and `SameSite=None` would require `Secure`, which this HTTP API cannot provide. The frontend development address remains `localhost`.
+
+CORS allows credentials only for the explicit origins already configured: `http://localhost:5173` and `http://127.0.0.1:5173`. A wildcard origin is still rejected. No origin was added. `AllowedHosts` remains the loopback hosts.
+
+State-changing requests require the antiforgery header `X-CSRF-TOKEN`. `GET /api/v1/auth/csrf` returns the token in JSON and stores the matching `PhotoPlatform.Csrf` cookie as HTTP-only. The frontend keeps that token in memory and does not store it, the password, or the session in `localStorage`.
+
+`POST /api/v1/auth/sign-in` returns 204 or a generic 401, "The email or password is incorrect." Unknown accounts, wrong passwords, lockout, and accounts without a membership use that same response. `POST /api/v1/auth/sign-out` requires the session and the CSRF header. `GET /api/v1/membership/current` requires the session and returns only that user's membership. Health endpoints stay anonymous. There is no public registration endpoint and no anonymous tenant creation.
+
+Passwords, password hashes, tokens, and connection strings stay out of logs and ordinary client responses. There is no photo table, upload endpoint, or public file URL.
 
 ## Photographs
 
@@ -22,13 +36,13 @@ Photographs are private by default. A photo is not public unless a later feature
 
 ## Tenants
 
-`Tenant` is a stored record. The application does not resolve a current tenant, and it does not filter queries by tenant. Multi-tenancy is not operational.
+`Tenant` is a stored record. The current membership endpoint resolves one tenant from the authenticated user's membership. It does not accept a client-supplied tenant id, slug, or header as the tenant. There is no global query filter because no other tenant-owned entity is stored yet.
 
-When tenant enforcement is implemented later:
+When later tenant-owned data is added:
 
 - The tenant for a request comes from an authenticated membership. A client-supplied tenant id, slug, or header is not sufficient on its own.
 - Every tenant-owned entity includes `TenantId` and an EF Core global query filter for the resolved tenant.
 - `IgnoreQueryFilters` is limited to an explicit case with its own test.
 - `Tenant.Slug` remains globally unique.
 
-Those rules are not implemented in P0-04. No tenant middleware was added.
+Those rules are not implemented for photographs or other tenant-owned data. No photo endpoint was added.

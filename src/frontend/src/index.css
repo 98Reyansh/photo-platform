@@ -164,9 +164,37 @@ h2 {
   opacity: 0.55;
 }
 
-.retry-button:focus-visible {
+.retry-button:focus-visible,
+.field input:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
+}
+
+.sign-in-panel {
+  margin-top: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+}
+
+.field input {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: 1rem/1.4 "Segoe UI", sans-serif;
+}
+
+.sign-in-success {
+  margin: 0.9rem 0 0;
+  color: var(--ok);
 }
 
 @media (min-width: 48rem) {

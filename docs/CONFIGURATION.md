@@ -33,7 +33,7 @@ Do not use `*` for `AllowedHosts` or for a CORS origin.
 
 ## CORS
 
-`Cors:AllowedOrigins` is empty in `appsettings.json`. Development adds only `http://localhost:5173` and `http://127.0.0.1:5173`. A configured origin of `*` is rejected at startup. Those two origins may send any header and method so the local Vite app can call the API. No other origin is allowed. P0-04 does not add an origin.
+`Cors:AllowedOrigins` is empty in `appsettings.json`. Development adds only `http://localhost:5173` and `http://127.0.0.1:5173`. A configured origin of `*` is rejected at startup. Those two origins may send any header and method, and the policy allows credentials so the browser can send the authentication cookie. No other origin is allowed. P0-05 does not add an origin.
 
 ## Swagger
 
