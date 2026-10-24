@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using PhotoPlatform.Application.Tenancy;
 using PhotoPlatform.Domain.Membership;
 using PhotoPlatform.Infrastructure.Persistence;
 
@@ -34,6 +35,6 @@ public class StudioMembershipConfigurationTests
             .UseNpgsql("Host=localhost;Database=photoplatform;Username=photoplatform")
             .Options;
 
-        return new ApplicationDbContext(options);
+        return new ApplicationDbContext(options, new CurrentStudio());
     }
 }

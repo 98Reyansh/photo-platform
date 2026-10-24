@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using PhotoPlatform.Application.Tenancy;
 using PhotoPlatform.Domain.Entities;
 using PhotoPlatform.Infrastructure.Persistence;
 
@@ -57,7 +58,7 @@ public class PostgreSqlTenantTests
             .UseNpgsql(connectionString)
             .Options;
 
-        return new ApplicationDbContext(options);
+        return new ApplicationDbContext(options, new CurrentStudio());
     }
 }
 

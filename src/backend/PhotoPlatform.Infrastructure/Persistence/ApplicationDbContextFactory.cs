@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using PhotoPlatform.Application.Tenancy;
 
 namespace PhotoPlatform.Infrastructure.Persistence;
 
@@ -20,6 +21,6 @@ public sealed class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Ap
             .UseNpgsql(connectionString)
             .Options;
 
-        return new ApplicationDbContext(options);
+        return new ApplicationDbContext(options, new CurrentStudio());
     }
 }

@@ -4,10 +4,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PhotoPlatform.Application.Authentication;
 using PhotoPlatform.Application.Membership;
+using PhotoPlatform.Application.Photos;
+using PhotoPlatform.Application.Tenancy;
 using PhotoPlatform.Infrastructure.Authentication;
 using PhotoPlatform.Infrastructure.Identity;
 using PhotoPlatform.Infrastructure.Membership;
 using PhotoPlatform.Infrastructure.Persistence;
+using PhotoPlatform.Infrastructure.Photos;
 
 namespace PhotoPlatform.Infrastructure;
 
@@ -19,6 +22,10 @@ public static class InfrastructureServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.AddScoped<CurrentStudio>();
+        services.AddScoped<ICurrentStudio>(provider => provider.GetRequiredService<CurrentStudio>());
+        services.AddScoped<ICurrentStudioSetter>(provider => provider.GetRequiredService<CurrentStudio>());
+
         services.AddDbContext<ApplicationDbContext>(options =>
         {
             options.UseNpgsql(GetRequiredConnectionString(configuration));
@@ -43,6 +50,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<DatabaseConnectivity>();
         services.AddScoped<ICurrentMembershipQuery, CurrentMembershipQuery>();
         services.AddScoped<IStudioSignIn, StudioSignIn>();
+        services.AddScoped<IPhotoCommands, PhotoCommands>();
         return services;
     }
 

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
+using PhotoPlatform.Application.Tenancy;
 using PhotoPlatform.Domain.Entities;
 using PhotoPlatform.Infrastructure;
 using PhotoPlatform.Infrastructure.Persistence;
@@ -84,7 +85,7 @@ public class TenantConfigurationTests
             .UseNpgsql("Host=localhost;Database=photoplatform;Username=photoplatform")
             .Options;
 
-        return new ApplicationDbContext(options);
+        return new ApplicationDbContext(options, new CurrentStudio());
     }
 
     private static void AssertRequired(IEntityType entity, string propertyName, int? maxLength)
