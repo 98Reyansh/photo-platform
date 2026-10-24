@@ -40,12 +40,23 @@ PhotoPlatform.Api
 
 Controllers stay thin. They translate HTTP into an application operation and translate the result back to HTTP. The health endpoint is the current exception: it reports process liveness and has no application use case.
 
-API endpoints return DTOs or other explicit response contracts. They do not return EF Core entities. `HealthResponse` and `DatabaseHealthResponse` are the current API contracts. `Tenant` is a domain and persistence model and is not returned by an endpoint.
+API endpoints return DTOs or other explicit response contracts. They do not return EF Core entities. `HealthResponse`, `DatabaseHealthResponse`, and `CurrentMembershipResponse` are the current API contracts. `Tenant` and `StudioMembership` are domain and persistence models and are not returned by an endpoint.
 
 ## Tenancy and photographs
 
-The product is planned as multi-tenant. Photographs are private by default: a photo is not public unless access is granted. The `Tenant` table stores a tenant record only. Request tenant resolution, authorization, and storage are later tasks. A Tenant row does not make multi-tenancy operational. The intended resolution rule and the private-photo rule are recorded in `docs/SECURITY.md`. Development standards are in `docs/DEVELOPMENT-STANDARDS.md`. Configuration is in `docs/CONFIGURATION.md`.
+The product is planned as multi-tenant. Photographs are private by default: a photo is not public unless access is granted. `GET /api/v1/membership/current` resolves the tenant from the signed-in user's studio membership. A client-supplied tenant id, slug, or header does not select a different tenant. Other tenant-owned data and global query filters remain later tasks. There is no photo table. The intended private-photo rule is recorded in `docs/SECURITY.md`. Development standards are in `docs/DEVELOPMENT-STANDARDS.md`. Configuration is in `docs/CONFIGURATION.md`.
+
+## Authentication decisions
+
+Accepted authentication decisions are separate from postponed photo and object storage. Accepting them does not authorize photograph storage, public file URLs, or an object store.
+
+Two decisions are accepted:
+
+- Local accounts and password hashing use ASP.NET Core Identity. See `docs/adr/0001-aspnet-core-identity.md`.
+- The browser session uses an HTTP-only cookie, with explicit credentialed CORS, CSRF protection, and environment-specific cookie settings. See `docs/adr/0002-cookie-authentication.md`.
+
+P0-05 implements those decisions for studio membership only. Photograph storage remains postponed.
 
 ## Postponed
 
-ASP.NET Core Identity and storage implementations wait for later tasks. PostgreSQL persistence is limited to the Tenant model described in `docs/DATABASE-DESIGN.md`. This document does not define a production deployment.
+Photo metadata, uploads, object storage, and public file URLs remain later tasks. They are not part of the accepted authentication decisions. PostgreSQL persistence for photographs is not defined by `docs/DATABASE-DESIGN.md`. This document does not define a production deployment.

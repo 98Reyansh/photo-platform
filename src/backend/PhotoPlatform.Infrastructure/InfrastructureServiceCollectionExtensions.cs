@@ -1,6 +1,12 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PhotoPlatform.Application.Authentication;
+using PhotoPlatform.Application.Membership;
+using PhotoPlatform.Infrastructure.Authentication;
+using PhotoPlatform.Infrastructure.Identity;
+using PhotoPlatform.Infrastructure.Membership;
 using PhotoPlatform.Infrastructure.Persistence;
 
 namespace PhotoPlatform.Infrastructure;
@@ -18,7 +24,25 @@ public static class InfrastructureServiceCollectionExtensions
             options.UseNpgsql(GetRequiredConnectionString(configuration));
         });
 
+        services.AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = 12;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+            })
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddSignInManager()
+            .AddDefaultTokenProviders();
+
+        services.AddScoped<IUserClaimsPrincipalFactory<ApplicationUser>, UserClaimsPrincipalFactory<ApplicationUser>>();
+
         services.AddScoped<DatabaseConnectivity>();
+        services.AddScoped<ICurrentMembershipQuery, CurrentMembershipQuery>();
+        services.AddScoped<IStudioSignIn, StudioSignIn>();
         return services;
     }
 

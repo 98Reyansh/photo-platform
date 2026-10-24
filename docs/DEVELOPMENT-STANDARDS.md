@@ -6,7 +6,7 @@ Photography Portfolio is a modular monolith on .NET 10, React, TypeScript, and V
 
 - `PhotoPlatform.Domain` holds domain types and rules. It does not reference ASP.NET Core or EF Core.
 - `PhotoPlatform.Application` is for use cases, DTOs, and service interfaces that a real use case needs. Do not add placeholder interfaces.
-- `PhotoPlatform.Infrastructure` holds EF Core, the Npgsql provider, and future external-service implementations.
+- `PhotoPlatform.Infrastructure` holds EF Core, ASP.NET Core Identity persistence, the Npgsql provider, and future external-service implementations.
 - `PhotoPlatform.Api` is the HTTP host. Controllers, OpenAPI, CORS, exception handling, and composition stay here.
 
 Allowed references:
@@ -18,7 +18,7 @@ Allowed references:
 
 Controllers stay thin. Endpoints return explicit response contracts, not EF Core entities. Timestamps stored by the application are UTC.
 
-The frontend calls `GET /api/v1/health` only. Its base URL is `VITE_API_BASE_URL`. Styling is the CSS in `src/frontend/src/index.css`. Tailwind is not part of this repository.
+The frontend calls `GET /api/v1/health`, `GET /api/v1/auth/csrf`, `POST /api/v1/auth/sign-in`, and `GET /api/v1/membership/current`. Auth requests use `credentials: 'include'`. The CSRF token and password stay in memory. Its base URL is `VITE_API_BASE_URL`. Styling is the CSS in `src/frontend/src/index.css`. Tailwind is not part of this repository.
 
 ## Tests
 

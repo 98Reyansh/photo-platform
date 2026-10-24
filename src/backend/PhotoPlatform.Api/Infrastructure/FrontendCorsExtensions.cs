@@ -29,7 +29,8 @@ public static class FrontendCorsExtensions
                 {
                     policy.WithOrigins(explicitOrigins)
                         .AllowAnyHeader()
-                        .AllowAnyMethod();
+                        .AllowAnyMethod()
+                        .AllowCredentials();
                 }
             });
         });
