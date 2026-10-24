@@ -18,19 +18,19 @@ Do not substitute another .NET major version. If `dotnet --version` does not rep
 ```text
 src/backend/PhotoPlatform.slnx                 Solution for the backend projects
 src/backend/Directory.Build.props               Shared project defaults for backend projects
-src/backend/PhotoPlatform.Domain                Domain types, including Tenant
-src/backend/PhotoPlatform.Application           Future use cases and DTOs
-src/backend/PhotoPlatform.Infrastructure        EF Core persistence and future external services
+src/backend/PhotoPlatform.Domain                Domain types, including Tenant and Photo
+src/backend/PhotoPlatform.Application           Use cases and DTOs, including photo commands
+src/backend/PhotoPlatform.Infrastructure        EF Core persistence. Object storage is not configured.
 src/backend/PhotoPlatform.Api                   ASP.NET Core Web API host
 src/frontend                                    Vite + React + TypeScript app
 docs/ARCHITECTURE.md                            Project boundaries and reference rules
-docs/DATABASE-DESIGN.md                         Tenant schema, development migration, and test database
+docs/DATABASE-DESIGN.md                         Tenant, membership, and photo schema, plus the test database
 docs/DEVELOPMENT-STANDARDS.md                   Repository and testing standards
 docs/CONFIGURATION.md                           Development and production configuration
 docs/SECURITY.md                                Error, logging, host, and tenancy rules
 ```
 
-`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Studio sign-in is local account membership. File uploads are not part of the current tasks.
+`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Studio sign-in is local account membership. Authenticated photo metadata endpoints are described below. File upload and object storage are not implemented.
 
 ## Local URLs
 
@@ -102,6 +102,19 @@ A successful response is HTTP 200 and JSON like:
 
 Stop the API and use **Retry** on the frontend. The page should show an error and should not report a successful connection. Start the API again and press **Retry**; the status should return to running.
 
+## Photo metadata
+
+Authenticated clients can manage private photo metadata. The tenant comes from the signed-in user's studio membership. These routes do not accept a file:
+
+| Method | Route |
+| --- | --- |
+| `POST` | `/api/v1/photos` |
+| `GET` | `/api/v1/photos/{id}` |
+| `PUT` | `/api/v1/photos/{id}` |
+| `DELETE` | `/api/v1/photos/{id}` |
+
+Stored fields are the photo id, tenant id, title, description, creation time, and update time. Title and description rules, CSRF, and the not-found behavior are in `docs/SECURITY.md`. The table and migration are in `docs/DATABASE-DESIGN.md`.
+
 ## PostgreSQL
 
 PostgreSQL is not required for the process health check. It is required to apply the Tenant migration and to receive a healthy database check.
@@ -169,7 +182,7 @@ After `database update`, inspect the schema:
 psql "host=localhost port=5432 dbname=photoplatform user=photoplatform" -c '\d "Tenants"'
 ```
 
-The initial migration is `20261020135016_InitialTenants`. It creates the `Tenants` table, the primary key, the status check, and the unique `IX_Tenants_Slug` index. That migration is already applied to the local development database `photoplatform`. Do not point `database update` at another database to recreate it.
+The initial migration is `20261020135016_InitialTenants`. It creates the `Tenants` table, the primary key, the status check, and the unique `IX_Tenants_Slug` index. That migration is already applied to the local development database `photoplatform`. `20261024122355_AddPrivatePhotoMetadata` creates the `Photos` table. Guarded tests apply pending migrations only when the database name is exactly `photo_platform_test`. Do not point `database update` at another database to recreate it.
 
 `GET /api/v1/health/database` returns HTTP 200 when PostgreSQL accepts a connection and HTTP 503 otherwise. The body uses `healthy` or `unhealthy` and does not include the connection string.
 
