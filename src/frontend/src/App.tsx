@@ -1,4 +1,5 @@
 import { useHealthCheck } from './hooks/useHealthCheck'
+import { SignInPanel } from './components/SignInPanel'
 
 function App() {
   const health = useHealthCheck()
@@ -43,6 +44,7 @@ function App() {
             Retry
           </button>
         </section>
+        <SignInPanel />
       </main>
     </div>
   )

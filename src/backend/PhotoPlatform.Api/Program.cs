@@ -4,12 +4,16 @@ using Swashbuckle.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(new CsrfValidationFilter());
+});
 builder.Services.AddOpenApi();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddFrontendCors(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddStudioAuthentication(builder.Environment);
 
 var app = builder.Build();
 
@@ -26,6 +30,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors(FrontendCorsExtensions.PolicyName);
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program;

@@ -30,7 +30,7 @@ docs/CONFIGURATION.md                           Development and production confi
 docs/SECURITY.md                                Error, logging, host, and tenancy rules
 ```
 
-`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Authentication and file uploads are not part of the current tasks.
+`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Studio sign-in is local account membership. File uploads are not part of the current tasks.
 
 ## Local URLs
 
