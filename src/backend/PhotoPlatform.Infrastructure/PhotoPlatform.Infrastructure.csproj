@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PhotoPlatform.Infrastructure.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PhotoPlatform.Application\PhotoPlatform.Application.csproj" />
     <ProjectReference Include="..\PhotoPlatform.Domain\PhotoPlatform.Domain.csproj" />
   </ItemGroup>

@@ -1,6 +1,6 @@
 # Security
 
-This document records the foundations that are in place and the rules later features must follow. Studio membership authentication is implemented. Photo storage is not.
+This document records the foundations that are in place and the rules later features must follow. Studio membership authentication and private photo metadata are implemented. Photo file storage is not.
 
 ## Responses and logs
 
@@ -28,21 +28,33 @@ State-changing requests require the antiforgery header `X-CSRF-TOKEN`. `GET /api
 
 `POST /api/v1/auth/sign-in` returns 204 or a generic 401, "The email or password is incorrect." Unknown accounts, wrong passwords, lockout, and accounts without a membership use that same response. `POST /api/v1/auth/sign-out` requires the session and the CSRF header. `GET /api/v1/membership/current` requires the session and returns only that user's membership. Health endpoints stay anonymous. There is no public registration endpoint and no anonymous tenant creation.
 
-Passwords, password hashes, tokens, and connection strings stay out of logs and ordinary client responses. There is no photo table, upload endpoint, or public file URL.
+Passwords, password hashes, tokens, and connection strings stay out of logs and ordinary client responses. There is no photo upload endpoint or public file URL.
 
 ## Photographs
 
-Photographs are private by default. A photo is not public unless a later feature grants access. This repository has no photo table, upload endpoint, or public file URL. Do not add a public object URL or an unauthenticated photo response.
+Photographs are private by default. A photo is not public unless a later feature grants access. Metadata is stored in `Photos` by migration `20261024122355_AddPrivatePhotoMetadata`. There is no upload, object storage, storage key, or original-file metadata. Do not add a public object URL or an unauthenticated photo response.
+
+Authenticated routes, all under the existing session cookie:
+
+| Method | Route | Success |
+| --- | --- | --- |
+| `POST` | `/api/v1/photos` | 201 and the created metadata |
+| `GET` | `/api/v1/photos/{id}` | 200 and the metadata |
+| `PUT` | `/api/v1/photos/{id}` | 200 and the updated metadata |
+| `DELETE` | `/api/v1/photos/{id}` | 204 |
+
+The response fields are the photo id, tenant id, title, description, creation timestamp, and update timestamp. Title is required, trimmed, and limited to 200 characters. Description is optional, trimmed, and limited to 2,000 characters. A blank description is stored as null. Those limits are enforced by the domain type when a command saves metadata. Request records do not declare them, and they do not accept a tenant id.
+
+The tenant is the authenticated user's studio membership. The EF Core query filter returns `Photos` rows for that studio only. It returns no rows when the studio is unresolved. An unresolved studio receives HTTP 403 before photo data is read. A missing id and a photo owned by another studio both receive HTTP 404 with the detail "The photo was not found." `POST`, `PUT`, and `DELETE` still require the `X-CSRF-TOKEN` header.
+
+Photo saves go through the context write boundary. An unresolved studio, a new photo for a different tenant, a change of tenant ownership, or a delete of another studio's photo is rejected and is not rewritten to the current tenant.
 
 ## Tenants
 
-`Tenant` is a stored record. The current membership endpoint resolves one tenant from the authenticated user's membership. It does not accept a client-supplied tenant id, slug, or header as the tenant. There is no global query filter because no other tenant-owned entity is stored yet.
+`Tenant` is a stored record. Membership and photo endpoints resolve one tenant from the authenticated user's membership. They do not accept a client-supplied tenant id, slug, or header as the tenant. `Photo` is the tenant-owned entity with an EF Core global query filter. Production photo code does not call `IgnoreQueryFilters`. `Tenant.Slug` remains globally unique.
 
 When later tenant-owned data is added:
 
 - The tenant for a request comes from an authenticated membership. A client-supplied tenant id, slug, or header is not sufficient on its own.
 - Every tenant-owned entity includes `TenantId` and an EF Core global query filter for the resolved tenant.
-- `IgnoreQueryFilters` is limited to an explicit case with its own test.
 - `Tenant.Slug` remains globally unique.
-
-Those rules are not implemented for photographs or other tenant-owned data. No photo endpoint was added.

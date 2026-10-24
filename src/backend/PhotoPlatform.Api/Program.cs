@@ -32,6 +32,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors(FrontendCorsExtensions.PolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<StudioResolutionMiddleware>();
 app.MapControllers();
 
 app.Run();

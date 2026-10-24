@@ -147,6 +147,36 @@ namespace PhotoPlatform.Infrastructure.Persistence.Migrations
                     b.ToTable("StudioMemberships", (string)null);
                 });
 
+            modelBuilder.Entity("PhotoPlatform.Domain.Photos.Photo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("Photos", (string)null);
+                });
+
             modelBuilder.Entity("PhotoPlatform.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -240,6 +270,15 @@ namespace PhotoPlatform.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("PhotoPlatform.Domain.Membership.StudioMembership", b =>
+                {
+                    b.HasOne("PhotoPlatform.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PhotoPlatform.Domain.Photos.Photo", b =>
                 {
                     b.HasOne("PhotoPlatform.Domain.Entities.Tenant", null)
                         .WithMany()
