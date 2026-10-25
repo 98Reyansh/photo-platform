@@ -18,7 +18,7 @@ Allowed references:
 
 Controllers stay thin. Endpoints return explicit response contracts, not EF Core entities. Timestamps stored by the application are UTC.
 
-The frontend calls `GET /api/v1/health`, `GET /api/v1/auth/csrf`, `POST /api/v1/auth/sign-in`, and `GET /api/v1/membership/current`. Auth requests use `credentials: 'include'`. The CSRF token and password stay in memory. Its base URL is `VITE_API_BASE_URL`. Styling is the CSS in `src/frontend/src/index.css`. Tailwind is not part of this repository.
+The frontend calls `GET /api/v1/health`, `GET /api/v1/auth/csrf`, `POST /api/v1/auth/sign-in`, `GET /api/v1/membership/current`, and, after sign-in, `GET /api/v1/photos`. Auth requests and the photo list use `credentials: 'include'`. The photo list does not send a tenant id or a CSRF header. The CSRF token and password stay in memory. The photo cursor stays in component state. Its base URL is `VITE_API_BASE_URL`. Styling is the CSS in `src/frontend/src/index.css`. Tailwind is not part of this repository.
 
 ## Tests
 
@@ -34,6 +34,7 @@ dotnet test src/backend/PhotoPlatform.slnx --configuration Release
 Frontend, from `src/frontend`:
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```

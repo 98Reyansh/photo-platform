@@ -1,8 +1,12 @@
+import { useState } from 'react'
+import { catalogSessionAfterSignIn } from './catalog/photoCatalog'
 import { useHealthCheck } from './hooks/useHealthCheck'
+import { PhotoCatalog } from './components/PhotoCatalog'
 import { SignInPanel } from './components/SignInPanel'
 
 function App() {
   const health = useHealthCheck()
+  const [catalogSession, setCatalogSession] = useState(0)
 
   return (
     <div className="page">
@@ -44,7 +48,8 @@ function App() {
             Retry
           </button>
         </section>
-        <SignInPanel />
+        <SignInPanel onSignedIn={() => setCatalogSession(catalogSessionAfterSignIn)} />
+        {catalogSession > 0 ? <PhotoCatalog key={catalogSession} /> : null}
       </main>
     </div>
   )

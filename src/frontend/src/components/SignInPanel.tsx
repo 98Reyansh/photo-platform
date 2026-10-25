@@ -3,7 +3,11 @@ import { createCsrfMemory, signInResultMessage, signInToStudio, type SignInResul
 
 const csrfMemory = createCsrfMemory()
 
-export function SignInPanel() {
+type SignInPanelProps = {
+  onSignedIn: () => void
+}
+
+export function SignInPanel({ onSignedIn }: SignInPanelProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
@@ -21,6 +25,9 @@ export function SignInPanel() {
     try {
       const next = await signInToStudio(fetch, baseUrl, email, password, csrfMemory)
       setResult(next)
+      if (next.ok) {
+        onSignedIn()
+      }
     } catch {
       setResult({ ok: false, message: 'The API could not be reached. Check that it is running and try again.' })
     } finally {

@@ -116,6 +116,8 @@ Authenticated clients can manage private photo metadata. The tenant comes from t
 
 `GET /api/v1/photos` returns one page of the signed-in studio's metadata. `limit` defaults to 20 and accepts 1 through 50. `cursor` continues from the previous page. The cursor is an opaque position, and it does not select a tenant. Results are newest first. Stored fields are the photo id, tenant id, title, description, creation time, and update time. Title and description rules, CSRF, and the not-found behavior are in `docs/SECURITY.md`. The table and migration are in `docs/DATABASE-DESIGN.md`.
 
+After a successful sign-in on this page, the frontend lists that metadata and offers Load more. It sends the session cookie and does not send a tenant id or a CSRF header on this GET. It does not show image files. Refreshing the page returns to the sign-in form; the catalog is not restored from the existing cookie.
+
 ## PostgreSQL
 
 PostgreSQL is not required for the process health check. It is required to apply the Tenant migration and to receive a healthy database check.
