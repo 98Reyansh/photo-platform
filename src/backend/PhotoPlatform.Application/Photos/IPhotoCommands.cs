@@ -13,4 +13,6 @@ public interface IPhotoCommands
         CancellationToken cancellationToken);
 
     Task<PhotoCommandResult> DeleteAsync(Guid photoId, CancellationToken cancellationToken);
+
+    Task<PhotoListResult> ListAsync(int? limit, string? cursor, CancellationToken cancellationToken);
 }
