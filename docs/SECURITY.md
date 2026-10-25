@@ -39,13 +39,16 @@ Authenticated routes, all under the existing session cookie:
 | Method | Route | Success |
 | --- | --- | --- |
 | `POST` | `/api/v1/photos` | 201 and the created metadata |
+| `GET` | `/api/v1/photos` | 200 and one page of metadata |
 | `GET` | `/api/v1/photos/{id}` | 200 and the metadata |
 | `PUT` | `/api/v1/photos/{id}` | 200 and the updated metadata |
 | `DELETE` | `/api/v1/photos/{id}` | 204 |
 
 The response fields are the photo id, tenant id, title, description, creation timestamp, and update timestamp. Title is required, trimmed, and limited to 200 characters. Description is optional, trimmed, and limited to 2,000 characters. A blank description is stored as null. Those limits are enforced by the domain type when a command saves metadata. Request records do not declare them, and they do not accept a tenant id.
 
-The tenant is the authenticated user's studio membership. The EF Core query filter returns `Photos` rows for that studio only. It returns no rows when the studio is unresolved. An unresolved studio receives HTTP 403 before photo data is read. A missing id and a photo owned by another studio both receive HTTP 404 with the detail "The photo was not found." `POST`, `PUT`, and `DELETE` still require the `X-CSRF-TOKEN` header.
+The tenant is the authenticated user's studio membership. The EF Core query filter returns `Photos` rows for that studio only. It returns no rows when the studio is unresolved. An unresolved studio receives HTTP 403 before photo data is read. A missing id and a photo owned by another studio both receive HTTP 404 with the detail "The photo was not found." `POST`, `PUT`, and `DELETE` still require the `X-CSRF-TOKEN` header. `GET` remains exempt.
+
+`GET /api/v1/photos` reads the filtered rows in `CreatedAtUtc` descending order, then `Id` descending order. `limit` defaults to 20. A supplied limit must be from 1 through 50, and an invalid or malformed limit returns HTTP 400. The response contains at most that many items. The query reads one extra row to decide whether another page exists, and it does not count the studio's photos. `continuationCursor` is present only when another page exists. An empty studio returns HTTP 200 with an empty item list and a null cursor. The cursor's `v1` value encodes the last returned creation time, in UTC ticks, and the photo id. Clients treat it as opaque. It does not grant access, and a later page still passes through the resolved-studio filter. A malformed cursor, an unsupported cursor version, or an invalid cursor value returns HTTP 400. A client-supplied tenant id does not change the page.
 
 Photo saves go through the context write boundary. An unresolved studio, a new photo for a different tenant, a change of tenant ownership, or a delete of another studio's photo is rejected and is not rewritten to the current tenant.
 

@@ -57,6 +57,8 @@ The domain type is `PhotoPlatform.Domain.Photos.Photo`. The application assigns 
 
 `ApplicationDbContext` applies a global query filter to `Photo`: the studio must be resolved and `TenantId` must equal that studio. An unresolved studio matches no photo rows. `SaveChanges` and `SaveChangesAsync` reject a photo write when the studio is unresolved, when a new photo's tenant is not that studio, or when an existing photo's original or current tenant is not that studio. The boundary does not assign a different `TenantId`. `Tenant` and `StudioMembership` saves are not subject to that photo check.
 
+`GET /api/v1/photos` reads that filtered set ordered by `CreatedAtUtc` descending and `Id` descending. A page requests at most 51 rows. Listing does not add a table, index, or migration.
+
 ## Migration
 
 Name: `20261020135016_InitialTenants`.

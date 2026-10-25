@@ -443,6 +443,111 @@ public class PostgreSqlPhotoTests
         }
     }
 
+    [PostgreSqlFact]
+    public async Task List_pages_one_studio_without_the_other_studios_photos()
+    {
+        var connectionString = Environment.GetEnvironmentVariable(PostgreSqlTenantTests.ConnectionVariable);
+        await MigrateAsync(connectionString);
+        var owned = new OwnedData();
+        try
+        {
+            Guid firstTenantId;
+            Guid secondTenantId;
+            Guid emptyTenantId;
+            var setup = new CurrentStudio();
+            await using (var context = CreateContext(connectionString!, setup))
+            {
+                firstTenantId = (await CreateTenantAsync(context, owned, "List North")).Id;
+                secondTenantId = (await CreateTenantAsync(context, owned, "List South")).Id;
+                emptyTenantId = (await CreateTenantAsync(context, owned, "List Empty")).Id;
+            }
+
+            var same = new DateTime(2026, 10, 25, 12, 0, 1, DateTimeKind.Utc);
+            await AddPhotoAsync(connectionString!, owned, firstTenantId, "Older", same.AddSeconds(-1));
+            await AddPhotoAsync(connectionString!, owned, firstTenantId, "Same early insert", same);
+            await AddPhotoAsync(connectionString!, owned, firstTenantId, "Newer", same.AddSeconds(1));
+            await AddPhotoAsync(connectionString!, owned, firstTenantId, "Same late insert", same);
+            var otherPhotoId = await AddPhotoAsync(connectionString!, owned, secondTenantId, "Other studio", same.AddSeconds(5));
+
+            var firstStudio = StudioFor(firstTenantId);
+            await using var first = CreateContext(connectionString!, firstStudio);
+            var commands = new PhotoCommands(first, firstStudio);
+            var full = await commands.ListAsync(limit: 50, cursor: null, CancellationToken.None);
+            Assert.Equal(PhotoCommandStatus.Success, full.Status);
+            Assert.NotNull(full.Page);
+            Assert.Null(full.Page.ContinuationCursor);
+            Assert.Equal(4, full.Page.Items.Count);
+            Assert.DoesNotContain(full.Page.Items, item => item.Id == otherPhotoId);
+            Assert.Equal(same.AddSeconds(1), full.Page.Items[0].CreatedAtUtc);
+            Assert.Equal(same, full.Page.Items[1].CreatedAtUtc);
+            Assert.Equal(same, full.Page.Items[2].CreatedAtUtc);
+            Assert.Equal(same.AddSeconds(-1), full.Page.Items[3].CreatedAtUtc);
+
+            var tied = await first.Photos
+                .Where(photo => photo.CreatedAtUtc == same)
+                .OrderByDescending(photo => photo.Id)
+                .Select(photo => photo.Id)
+                .ToListAsync(CancellationToken.None);
+            Assert.Equal(
+                tied,
+                full.Page.Items.Where(item => item.CreatedAtUtc == same).Select(item => item.Id).ToArray());
+
+            var firstPage = await commands.ListAsync(limit: 2, cursor: null, CancellationToken.None);
+            Assert.NotNull(firstPage.Page);
+            Assert.NotNull(firstPage.Page.ContinuationCursor);
+            Assert.Equal(full.Page.Items.Take(2).Select(item => item.Id), firstPage.Page.Items.Select(item => item.Id));
+            var continued = await commands.ListAsync(limit: 2, firstPage.Page.ContinuationCursor, CancellationToken.None);
+            Assert.NotNull(continued.Page);
+            Assert.Null(continued.Page.ContinuationCursor);
+            Assert.Equal(full.Page.Items.Skip(2).Select(item => item.Id), continued.Page.Items.Select(item => item.Id));
+            var combined = firstPage.Page.Items.Select(item => item.Id)
+                .Concat(continued.Page.Items.Select(item => item.Id))
+                .ToArray();
+            Assert.Equal(4, combined.Distinct().Count());
+            Assert.Equal(full.Page.Items.Select(item => item.Id), combined);
+            Assert.DoesNotContain(combined, id => id == otherPhotoId);
+
+            var tieCursor = PhotoCursor.Encode(full.Page.Items[1].CreatedAtUtc, full.Page.Items[1].Id);
+            var afterTie = await commands.ListAsync(limit: 1, tieCursor, CancellationToken.None);
+            Assert.NotNull(afterTie.Page);
+            Assert.Equal(full.Page.Items[2].Id, Assert.Single(afterTie.Page.Items).Id);
+
+            var secondStudio = StudioFor(secondTenantId);
+            await using var second = CreateContext(connectionString!, secondStudio);
+            var otherPage = await new PhotoCommands(second, secondStudio).ListAsync(null, null, CancellationToken.None);
+            Assert.NotNull(otherPage.Page);
+            Assert.Equal(otherPhotoId, Assert.Single(otherPage.Page.Items).Id);
+
+            var emptyStudio = StudioFor(emptyTenantId);
+            await using var empty = CreateContext(connectionString!, emptyStudio);
+            var emptyPage = await new PhotoCommands(empty, emptyStudio).ListAsync(null, null, CancellationToken.None);
+            Assert.Equal(PhotoCommandStatus.Success, emptyPage.Status);
+            Assert.NotNull(emptyPage.Page);
+            Assert.Empty(emptyPage.Page.Items);
+            Assert.Null(emptyPage.Page.ContinuationCursor);
+        }
+        finally
+        {
+            await DeleteOwnedAsync(connectionString, owned);
+        }
+    }
+
+    private static async Task<Guid> AddPhotoAsync(
+        string connectionString,
+        OwnedData owned,
+        Guid tenantId,
+        string title,
+        DateTime createdAtUtc)
+    {
+        var studio = StudioFor(tenantId);
+        await using var context = CreateContext(connectionString, studio);
+        var photo = new Photo(tenantId, title, null, createdAtUtc);
+        context.Photos.Add(photo);
+        await context.SaveChangesAsync(CancellationToken.None);
+        owned.PhotoIds.Add((tenantId, photo.Id));
+        return photo.Id;
+    }
+
     private static async Task MigrateAsync(string? connectionString)
     {
         PostgreSqlTestGuard.EnsureSafeToUse(connectionString);
