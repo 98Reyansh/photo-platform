@@ -27,6 +27,14 @@ public class PhotoCommandTests
         Assert.DoesNotContain(typeof(ICurrentStudioSetter), parameters);
         Assert.Null(typeof(CreatePhotoRequest).GetProperty("TenantId"));
         Assert.Null(typeof(UpdatePhotoRequest).GetProperty("TenantId"));
+        Assert.Null(typeof(PhotoListResponse).GetProperty("TenantId"));
+
+        var listParameters = typeof(IPhotoCommands).GetMethod(nameof(IPhotoCommands.ListAsync))!
+            .GetParameters();
+        Assert.DoesNotContain(listParameters, parameter => parameter.ParameterType == typeof(Guid));
+        Assert.DoesNotContain(
+            listParameters,
+            parameter => parameter.Name?.Contains("tenant", StringComparison.OrdinalIgnoreCase) == true);
     }
 
     [Fact]
@@ -47,6 +55,9 @@ public class PhotoCommandTests
         Assert.Equal(
             PhotoCommandStatus.UnresolvedStudio,
             (await commands.DeleteAsync(photoId, CancellationToken.None)).Status);
+        Assert.Equal(
+            PhotoCommandStatus.UnresolvedStudio,
+            (await commands.ListAsync(limit: 0, cursor: "not-a-cursor", CancellationToken.None)).Status);
         Assert.Empty(context.ChangeTracker.Entries<Photo>());
     }
 

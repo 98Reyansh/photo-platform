@@ -109,11 +109,12 @@ Authenticated clients can manage private photo metadata. The tenant comes from t
 | Method | Route |
 | --- | --- |
 | `POST` | `/api/v1/photos` |
+| `GET` | `/api/v1/photos` |
 | `GET` | `/api/v1/photos/{id}` |
 | `PUT` | `/api/v1/photos/{id}` |
 | `DELETE` | `/api/v1/photos/{id}` |
 
-Stored fields are the photo id, tenant id, title, description, creation time, and update time. Title and description rules, CSRF, and the not-found behavior are in `docs/SECURITY.md`. The table and migration are in `docs/DATABASE-DESIGN.md`.
+`GET /api/v1/photos` returns one page of the signed-in studio's metadata. `limit` defaults to 20 and accepts 1 through 50. `cursor` continues from the previous page. The cursor is an opaque position, and it does not select a tenant. Results are newest first. Stored fields are the photo id, tenant id, title, description, creation time, and update time. Title and description rules, CSRF, and the not-found behavior are in `docs/SECURITY.md`. The table and migration are in `docs/DATABASE-DESIGN.md`.
 
 ## PostgreSQL
 

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
@@ -223,6 +224,156 @@ public class PhotoEndpointTests
         Assert.Equal(photoId, factory.Recording.LastPhotoId);
     }
 
+    [Fact]
+    public async Task Anonymous_photo_list_is_rejected()
+    {
+        await using var factory = new PhotoApiFactory();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v1/photos");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Unresolved_studio_list_uses_the_membership_error()
+    {
+        var clientTenant = Guid.CreateVersion7();
+        await using var factory = new PhotoApiFactory();
+        factory.Principal.IsAuthenticated = true;
+        factory.Principal.NameIdentifier = Guid.CreateVersion7().ToString();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/photos?tenantId={clientTenant}");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Contains(PhotosController.UnresolvedDetail, body, StringComparison.Ordinal);
+        Assert.DoesNotContain(clientTenant.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("\"items\"", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Empty_photo_list_returns_an_empty_page()
+    {
+        var userId = Guid.CreateVersion7();
+        await using var factory = new PhotoApiFactory { UseRecordingCommands = true };
+        factory.Principal.IsAuthenticated = true;
+        factory.Principal.NameIdentifier = userId.ToString();
+        factory.Membership.TenantsByUser[userId] = Guid.CreateVersion7();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v1/photos");
+        var page = await response.Content.ReadFromJsonAsync<PhotoListResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(page);
+        Assert.Empty(page.Items);
+        Assert.Null(page.ContinuationCursor);
+        Assert.Equal(["list"], factory.Recording.Calls);
+        Assert.Null(factory.Recording.LastLimit);
+        Assert.Null(factory.Recording.LastCursor);
+    }
+
+    [Fact]
+    public async Task Photo_list_ignores_a_client_tenant_and_does_not_require_csrf()
+    {
+        var userId = Guid.CreateVersion7();
+        var studioTenant = Guid.CreateVersion7();
+        var clientTenant = Guid.CreateVersion7();
+        var photoId = Guid.CreateVersion7();
+        await using var factory = new PhotoApiFactory { UseRecordingCommands = true };
+        factory.Principal.IsAuthenticated = true;
+        factory.Principal.NameIdentifier = userId.ToString();
+        factory.Membership.TenantsByUser[userId] = studioTenant;
+        factory.Recording.ListResult = PhotoListResult.Success(new PhotoPage(
+            [new PhotoResponse(photoId, studioTenant, "Harbor", "Dawn", CreatedAtUtc, CreatedAtUtc)],
+            ContinuationCursor: null));
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/v1/photos?limit=20&tenantId={clientTenant}");
+        request.Headers.Add("X-Tenant-Id", clientTenant.ToString());
+
+        var response = await client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        var page = JsonSerializer.Deserialize<PhotoListResponse>(body, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(page);
+        var item = Assert.Single(page.Items);
+        Assert.Equal(photoId, item.Id);
+        Assert.Equal(studioTenant, item.TenantId);
+        Assert.Null(page.ContinuationCursor);
+        Assert.Equal(20, factory.Recording.LastLimit);
+        Assert.Null(factory.Recording.LastCursor);
+        Assert.DoesNotContain(clientTenant.ToString(), body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("51")]
+    [InlineData("-1")]
+    [InlineData("abc")]
+    public async Task Invalid_photo_list_limit_is_rejected(string limit)
+    {
+        var userId = Guid.CreateVersion7();
+        await using var factory = new PhotoApiFactory();
+        factory.Principal.IsAuthenticated = true;
+        factory.Principal.NameIdentifier = userId.ToString();
+        factory.Membership.TenantsByUser[userId] = Guid.CreateVersion7();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync($"/api/v1/photos?limit={limit}");
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        if (limit != "abc")
+        {
+            Assert.Contains(PhotoCursor.LimitError, body, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task Invalid_photo_list_cursors_are_rejected()
+    {
+        var userId = Guid.CreateVersion7();
+        await using var factory = new PhotoApiFactory();
+        factory.Principal.IsAuthenticated = true;
+        factory.Principal.NameIdentifier = userId.ToString();
+        factory.Membership.TenantsByUser[userId] = Guid.CreateVersion7();
+        using var client = factory.CreateClient();
+        var valid = PhotoCursor.Encode(CreatedAtUtc, Guid.CreateVersion7());
+        var unsupported = "v2." + valid["v1.".Length..];
+        var emptyId = Cursor(CreatedAtUtc.Ticks, Guid.Empty);
+        var badTicks = Cursor(-1, Guid.CreateVersion7());
+
+        foreach (var (cursor, detail) in new (string Cursor, string Detail)[]
+        {
+            ("not-a-cursor", PhotoCursor.FormatError),
+            ("v1.****", PhotoCursor.FormatError),
+            (unsupported, PhotoCursor.VersionError),
+            (emptyId, PhotoCursor.ValueError),
+            (badTicks, PhotoCursor.ValueError),
+        })
+        {
+            var response = await client.GetAsync($"/api/v1/photos?cursor={Uri.EscapeDataString(cursor)}");
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains(detail, body, StringComparison.Ordinal);
+        }
+    }
+
+    private static string Cursor(long ticks, Guid id)
+    {
+        Span<byte> payload = stackalloc byte[24];
+        System.Buffers.Binary.BinaryPrimitives.WriteInt64BigEndian(payload[..8], ticks);
+        id.ToByteArray().CopyTo(payload[8..]);
+        var encoded = Convert.ToBase64String(payload).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        return "v1." + encoded;
+    }
+
     private static async Task<HttpResponseMessage> SendAsync(
         HttpClient client,
         HttpMethod method,
@@ -384,6 +535,20 @@ public class PhotoEndpointTests
             Calls.Add("delete");
             LastPhotoId = photoId;
             return Task.FromResult(PhotoCommandResult.Success(photo: null));
+        }
+
+        public int? LastLimit { get; private set; }
+
+        public string? LastCursor { get; private set; }
+
+        public PhotoListResult ListResult { get; set; } = PhotoListResult.Success(new PhotoPage([], null));
+
+        public Task<PhotoListResult> ListAsync(int? limit, string? cursor, CancellationToken cancellationToken)
+        {
+            Calls.Add("list");
+            LastLimit = limit;
+            LastCursor = cursor;
+            return Task.FromResult(ListResult);
         }
 
         private PhotoResponse Sample(Guid photoId, string? title, string? description)

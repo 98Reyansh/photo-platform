@@ -40,11 +40,11 @@ PhotoPlatform.Api
 
 Controllers stay thin. They translate HTTP into an application operation and translate the result back to HTTP. The health endpoint is the current exception: it reports process liveness and has no application use case.
 
-API endpoints return DTOs or other explicit response contracts. They do not return EF Core entities. `HealthResponse`, `DatabaseHealthResponse`, `CurrentMembershipResponse`, and `PhotoResponse` are the current API contracts. `Tenant`, `StudioMembership`, and `Photo` are domain and persistence models and are not returned by an endpoint.
+API endpoints return DTOs or other explicit response contracts. They do not return EF Core entities. `HealthResponse`, `DatabaseHealthResponse`, `CurrentMembershipResponse`, `PhotoResponse`, and `PhotoListResponse` are the current API contracts. `Tenant`, `StudioMembership`, and `Photo` are domain and persistence models and are not returned by an endpoint.
 
 ## Tenancy and photographs
 
-The product is multi-tenant. Photographs are private by default: a photo is not public unless access is granted. `GET /api/v1/membership/current` and the photo endpoints resolve the tenant from the signed-in user's studio membership. A client-supplied tenant id, slug, or header does not select a different tenant. Photo metadata is stored in `Photos`. The EF Core query filter returns rows only for the resolved studio and returns none when the studio is unresolved. Photo writes are rejected when that studio is unresolved or the photo's tenant does not match. Authenticated routes are `POST /api/v1/photos`, `GET /api/v1/photos/{id}`, `PUT /api/v1/photos/{id}`, and `DELETE /api/v1/photos/{id}`. The private-photo rule is recorded in `docs/SECURITY.md`. The table is recorded in `docs/DATABASE-DESIGN.md`. Development standards are in `docs/DEVELOPMENT-STANDARDS.md`. Configuration is in `docs/CONFIGURATION.md`.
+The product is multi-tenant. Photographs are private by default: a photo is not public unless access is granted. `GET /api/v1/membership/current` and the photo endpoints resolve the tenant from the signed-in user's studio membership. A client-supplied tenant id, slug, or header does not select a different tenant. Photo metadata is stored in `Photos`. The EF Core query filter returns rows only for the resolved studio and returns none when the studio is unresolved. Photo writes are rejected when that studio is unresolved or the photo's tenant does not match. Authenticated routes are `POST /api/v1/photos`, `GET /api/v1/photos`, `GET /api/v1/photos/{id}`, `PUT /api/v1/photos/{id}`, and `DELETE /api/v1/photos/{id}`. The collection route returns one page, newest first, with `Id` descending when creation times match. `limit` defaults to 20 and accepts 1 through 50. The continuation cursor is an opaque position for that order. It is not an authorization token, and the query filter still selects the resolved studio. The private-photo rule is recorded in `docs/SECURITY.md`. The table is recorded in `docs/DATABASE-DESIGN.md`. Development standards are in `docs/DEVELOPMENT-STANDARDS.md`. Configuration is in `docs/CONFIGURATION.md`.
 
 ## Authentication decisions
 
@@ -55,7 +55,7 @@ Two decisions are accepted:
 - Local accounts and password hashing use ASP.NET Core Identity. See `docs/adr/0001-aspnet-core-identity.md`.
 - The browser session uses an HTTP-only cookie, with explicit credentialed CORS, CSRF protection, and environment-specific cookie settings. See `docs/adr/0002-cookie-authentication.md`.
 
-P0-05 implements those decisions for studio membership. P0-06 uses that membership to scope private photo metadata. Photograph file storage remains postponed.
+P0-05 implements those decisions for studio membership. P0-06 uses that membership to scope private photo metadata. P0-07 lists that metadata one page at a time. Photograph file storage remains postponed.
 
 ## Postponed
 

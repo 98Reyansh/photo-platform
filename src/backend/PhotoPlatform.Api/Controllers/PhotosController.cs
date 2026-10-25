@@ -28,6 +28,25 @@ public sealed class PhotosController(IPhotoCommands photos) : ControllerBase
         return MapWrite(result, created: true);
     }
 
+    [HttpGet]
+    [ProducesResponseType(typeof(PhotoListResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<PhotoListResponse>> List(
+        [FromQuery] int? limit,
+        [FromQuery] string? cursor,
+        CancellationToken cancellationToken)
+    {
+        var result = await photos.ListAsync(limit, cursor, cancellationToken);
+        if (result.Status == PhotoCommandStatus.Success && result.Page is not null)
+        {
+            return Ok(new PhotoListResponse(result.Page.Items, result.Page.ContinuationCursor));
+        }
+
+        return MapListFailure(result);
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(PhotoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -95,9 +114,19 @@ public sealed class PhotosController(IPhotoCommands photos) : ControllerBase
         return MapFailure(result);
     }
 
+    private ActionResult MapListFailure(PhotoListResult result)
+    {
+        return ProblemFor(result.Status, result.Error, "The photo list request is invalid.");
+    }
+
     private ActionResult MapFailure(PhotoCommandResult result)
     {
-        return result.Status switch
+        return ProblemFor(result.Status, result.Error, "The photo details are invalid.");
+    }
+
+    private ActionResult ProblemFor(PhotoCommandStatus status, string? error, string invalidTitle)
+    {
+        return status switch
         {
             PhotoCommandStatus.UnresolvedStudio => Problem(
                 statusCode: StatusCodes.Status403Forbidden,
@@ -109,8 +138,8 @@ public sealed class PhotosController(IPhotoCommands photos) : ControllerBase
                 detail: NotFoundDetail),
             PhotoCommandStatus.Invalid => Problem(
                 statusCode: StatusCodes.Status400BadRequest,
-                title: "The photo details are invalid.",
-                detail: result.Error),
+                title: invalidTitle,
+                detail: error),
             _ => Problem(
                 statusCode: StatusCodes.Status500InternalServerError,
                 title: "An unexpected error occurred.",
