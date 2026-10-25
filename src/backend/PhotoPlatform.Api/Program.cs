@@ -2,8 +2,17 @@ using PhotoPlatform.Api.Infrastructure;
 using PhotoPlatform.Infrastructure;
 using Swashbuckle.AspNetCore;
 
+if (StudioBootstrapCommand.IsRequested(args))
+{
+    Environment.ExitCode = await StudioBootstrapEntry.RunAsync(args);
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(PhotoOriginalUploadLimits.ConfigureKestrel);
+builder.Services.AddSingleton<PhotoUploadSpoolGate>();
+builder.Services.AddSingleton<PhotoOriginalMultipartReader>();
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add(new CsrfValidationFilter());

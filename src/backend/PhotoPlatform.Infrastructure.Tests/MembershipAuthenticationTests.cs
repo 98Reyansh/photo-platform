@@ -259,6 +259,7 @@ public class MembershipAuthenticationTests
         Assert.True(cookie.Cookie.HttpOnly);
         Assert.Equal(SameSiteMode.Lax, cookie.Cookie.SameSite);
         Assert.Equal(CookieSecurePolicy.SameAsRequest, cookie.Cookie.SecurePolicy);
+        Assert.False(cookie.SlidingExpiration);
         Assert.Equal(StudioAuthenticationExtensions.CsrfHeaderName, antiforgery.HeaderName);
         Assert.Equal(StudioAuthenticationExtensions.CsrfCookieName, antiforgery.Cookie.Name);
         Assert.True(antiforgery.Cookie.HttpOnly);

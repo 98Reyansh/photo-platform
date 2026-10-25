@@ -79,6 +79,67 @@ public class TenantConfigurationTests
         Assert.Equal(configured, connectionString);
     }
 
+    [Fact]
+    public void Design_time_without_configuration_fails_without_a_fallback_database()
+    {
+        var configuration = ApplicationDbContextFactory.CreateDesignTimeConfiguration(
+            aspNetCoreEnvironment: "Production",
+            dotnetEnvironment: null,
+            includeProcessEnvironment: false,
+            environmentConnectionString: null);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            InfrastructureServiceCollectionExtensions.GetRequiredConnectionString(configuration));
+
+        Assert.Contains("ConnectionStrings:DefaultConnection", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Password=", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("photoplatform", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CHANGE_ME", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Design_time_environment_value_is_used_and_blank_value_does_not_fall_back()
+    {
+        const string configured = "Host=localhost;Database=configured_design_time;Username=configured_user";
+        var configuration = ApplicationDbContextFactory.CreateDesignTimeConfiguration(
+            aspNetCoreEnvironment: "Production",
+            dotnetEnvironment: "Development",
+            includeProcessEnvironment: false,
+            environmentConnectionString: configured);
+
+        var connectionString = InfrastructureServiceCollectionExtensions.GetRequiredConnectionString(configuration);
+
+        Assert.Equal(configured, connectionString);
+
+        var blank = ApplicationDbContextFactory.CreateDesignTimeConfiguration(
+            aspNetCoreEnvironment: "Production",
+            dotnetEnvironment: null,
+            includeProcessEnvironment: false,
+            environmentConnectionString: "  ");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            InfrastructureServiceCollectionExtensions.GetRequiredConnectionString(blank));
+        Assert.DoesNotContain("Password=", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null, null, true)]
+    [InlineData("", "  ", true)]
+    [InlineData("Development", "Production", true)]
+    [InlineData("development", null, true)]
+    [InlineData(null, "Development", true)]
+    [InlineData("Production", null, false)]
+    [InlineData(null, "Staging", false)]
+    public void Design_time_user_secrets_follow_the_host_environment(
+        string? aspNetCoreEnvironment,
+        string? dotnetEnvironment,
+        bool loadsUserSecrets)
+    {
+        Assert.Equal(
+            loadsUserSecrets,
+            ApplicationDbContextFactory.LoadsApiUserSecrets(aspNetCoreEnvironment, dotnetEnvironment));
+    }
+
     private static ApplicationDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()

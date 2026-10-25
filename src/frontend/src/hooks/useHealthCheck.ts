@@ -3,7 +3,7 @@ import { fetchHealth, HealthCheckError } from '../api/health'
 
 export type HealthPhase = 'loading' | 'success' | 'error'
 
-type HealthView = {
+export type HealthView = {
   phase: HealthPhase
   label: string
   detail: string | null

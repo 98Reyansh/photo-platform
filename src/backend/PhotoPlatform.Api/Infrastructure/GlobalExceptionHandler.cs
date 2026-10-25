@@ -16,14 +16,23 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
             httpContext.Request.Path,
             exception.GetType().Name);
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        var requestTooLarge = exception is BadHttpRequestException badRequest
+            && badRequest.StatusCode == StatusCodes.Status413PayloadTooLarge;
+        var status = requestTooLarge
+            ? StatusCodes.Status413PayloadTooLarge
+            : StatusCodes.Status500InternalServerError;
+        httpContext.Response.StatusCode = status;
 
         await httpContext.Response.WriteAsJsonAsync(
             new ProblemDetails
             {
-                Status = StatusCodes.Status500InternalServerError,
-                Title = "An unexpected error occurred.",
-                Detail = "The request could not be completed.",
+                Status = status,
+                Title = requestTooLarge
+                    ? PhotoOriginalUploadLimits.RequestTooLargeTitle
+                    : "An unexpected error occurred.",
+                Detail = requestTooLarge
+                    ? PhotoOriginalUploadLimits.RequestTooLargeDetail
+                    : "The request could not be completed.",
             },
             cancellationToken);
 

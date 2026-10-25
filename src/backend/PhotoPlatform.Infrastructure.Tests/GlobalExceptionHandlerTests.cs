@@ -52,6 +52,32 @@ public class GlobalExceptionHandlerTests
         Assert.DoesNotContain(thrown.StackTrace ?? "at ", entry.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task A_request_body_limit_stays_413_and_does_not_echo_the_exception()
+    {
+        const string secret = "C:\\library\\secret-name.jpg";
+        var thrown = new BadHttpRequestException($"{secret} Request body too large.", StatusCodes.Status413PayloadTooLarge);
+        var logger = new CollectingLogger<GlobalExceptionHandler>();
+        var handler = new GlobalExceptionHandler(logger);
+        var context = new DefaultHttpContext();
+        context.Request.Method = "POST";
+        context.Request.Path = "/api/v1/photos/originals";
+        context.Response.Body = new MemoryStream();
+
+        var handled = await handler.TryHandleAsync(context, thrown, CancellationToken.None);
+        context.Response.Body.Position = 0;
+        var body = await new StreamReader(context.Response.Body, Encoding.UTF8).ReadToEndAsync();
+
+        Assert.True(handled);
+        Assert.Equal(StatusCodes.Status413PayloadTooLarge, context.Response.StatusCode);
+        Assert.Contains(PhotoOriginalUploadLimits.RequestTooLargeTitle, body, StringComparison.Ordinal);
+        Assert.Contains(PhotoOriginalUploadLimits.RequestTooLargeDetail, body, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, body, StringComparison.Ordinal);
+        Assert.DoesNotContain("Request body too large", body, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, logger.Entries.Single().Message, StringComparison.Ordinal);
+        Assert.Null(logger.Entries.Single().Exception);
+    }
+
     private sealed class CollectingLogger<T> : ILogger<T>
     {
         public List<LogEntry> Entries { get; } = [];

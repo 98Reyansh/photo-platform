@@ -18,6 +18,9 @@ public static class InfrastructureServiceCollectionExtensions
 {
     public const string ConnectionStringName = "DefaultConnection";
 
+    public static string MissingConnectionStringMessage { get; } =
+        $"Connection string 'ConnectionStrings:{ConnectionStringName}' is not configured. Set the ConnectionStrings__{ConnectionStringName} environment variable or the ConnectionStrings:{ConnectionStringName} user secret.";
+
     public static IServiceCollection AddInfrastructure(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -51,6 +54,18 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ICurrentMembershipQuery, CurrentMembershipQuery>();
         services.AddScoped<IStudioSignIn, StudioSignIn>();
         services.AddScoped<IPhotoCommands, PhotoCommands>();
+        services.AddScoped<IStudioBootstrap, StudioBootstrap>();
+        services.Configure<LocalPrivatePhotoStoreOptions>(
+            configuration.GetSection(LocalPrivatePhotoStoreOptions.SectionName));
+        services.Configure<PrivatePhotoDecodeOptions>(
+            configuration.GetSection(PrivatePhotoDecodeOptions.SectionName));
+        services.AddSingleton<IPrivatePhotoDecoder, SkiaPrivatePhotoDecoder>();
+        services.AddSingleton<IPrivatePhotoDecodeGate, PrivatePhotoDecodeGate>();
+        services.AddSingleton<IPrivatePhotoStore, LocalPrivatePhotoStore>();
+        services.AddScoped<IPhotoOriginalRecords, PhotoOriginalRecords>();
+        services.AddScoped<IPhotoCommitClassifier, NpgsqlPhotoCommitClassifier>();
+        services.AddSingleton<IPhotoUploadDiagnostics, PhotoUploadDiagnostics>();
+        services.AddScoped<IPhotoOriginalUpload, PhotoOriginalUpload>();
         return services;
     }
 
@@ -61,8 +76,7 @@ public static class InfrastructureServiceCollectionExtensions
         var connectionString = configuration.GetConnectionString(ConnectionStringName);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new InvalidOperationException(
-                $"Connection string 'ConnectionStrings:{ConnectionStringName}' is not configured. Set the ConnectionStrings__{ConnectionStringName} environment variable or the ConnectionStrings:{ConnectionStringName} user secret.");
+            throw new InvalidOperationException(MissingConnectionStringMessage);
         }
 
         return connectionString;
