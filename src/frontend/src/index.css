@@ -197,6 +197,64 @@ h2 {
   color: var(--ok);
 }
 
+.photo-catalog {
+  margin-top: 1rem;
+}
+
+.photo-empty,
+.photo-catalog .status-label {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.photo-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--bg);
+}
+
+.photo-card h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.photo-description {
+  margin: 0;
+}
+
+.photo-description.missing,
+.photo-times {
+  color: var(--muted);
+}
+
+.photo-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin: 0.6rem 0 0;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.photo-actions .retry-button {
+  margin-top: 0.9rem;
+}
+
 @media (min-width: 48rem) {
   .page {
     padding-top: 4rem;
@@ -204,6 +262,463 @@ h2 {
 
   h1 {
     font-size: 3.25rem;
+  }
+}
+
+.brand {
+  margin: 0 0 0.75rem;
+  color: var(--accent);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+body:has(.is-studio) {
+  color-scheme: dark;
+  background: #12100e;
+}
+
+.is-studio {
+  --bg: #12100e;
+  --ink: #f4efe6;
+  --muted: #b7aa9a;
+  --card: #1c1916;
+  --line: #3a342c;
+  --accent: #c4a484;
+  --sand: #d8c4a8;
+  --ok: #c9ead6;
+  --ok-bg: #1a3326;
+  --err: #ffc9c9;
+  --err-bg: #4a2424;
+  --wait: #f3e2b3;
+  --wait-bg: #3d3218;
+  --focus: #e7cbb0;
+  width: min(100% - 2rem, 72rem);
+  color: var(--ink);
+}
+
+.studio-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem 1.25rem;
+  margin-bottom: 2.25rem;
+  padding-bottom: 1.15rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  background: var(--sand);
+  color: #2c241c;
+}
+
+.brand-mark .icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.brand-name,
+.brand-kicker,
+.welcome-support,
+.studio-name,
+.account-studio,
+.summary-detail,
+.library-note,
+.api-health-note,
+.summary-card h2,
+.library-heading,
+.studio-nav a,
+.studio-nav button,
+.account-sign-out,
+.upload-status {
+  font-family: "Segoe UI", sans-serif;
+}
+
+.brand-name,
+.brand-kicker,
+.welcome-support,
+.studio-name,
+.account-studio,
+.summary-detail,
+.library-note,
+.api-health-note {
+  margin: 0;
+}
+
+.brand-name {
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.brand-kicker {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.studio-nav {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-width: 100%;
+  order: 3;
+}
+
+.studio-nav a,
+.studio-nav button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.95rem/1.2 "Segoe UI", sans-serif;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+}
+
+.studio-nav a[aria-current='page'] {
+  background: #26211c;
+  color: var(--sand);
+}
+
+.studio-nav a:hover {
+  color: var(--ink);
+}
+
+.studio-nav button:disabled,
+.upload-status:disabled,
+.account-sign-out:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.coming-soon {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.studio-nav a:focus-visible,
+.account-sign-out:focus-visible,
+.upload-status:focus-visible,
+.is-studio .api-health .retry-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.account {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: start;
+  order: 2;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.account-studio {
+  max-width: 16rem;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.account-sign-out {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 0.9rem/1 "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+.account-sign-out:disabled,
+.upload-status:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+}
+
+.studio-home .eyebrow {
+  margin-bottom: 0.7rem;
+  color: var(--accent);
+  letter-spacing: 0.18em;
+}
+
+.studio-home h1 {
+  max-width: 14ch;
+  font-size: clamp(2.35rem, 5vw, 3.6rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+.welcome-support {
+  max-width: 34rem;
+  margin-top: 0.85rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.studio-name {
+  margin-top: 0.45rem;
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.summary-card,
+.library-panel {
+  min-width: 0;
+  padding: 1.3rem 1.25rem 1.4rem;
+  border: 1px solid var(--line);
+  border-radius: 1.15rem;
+  background: var(--card);
+}
+
+.summary-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.7rem;
+  background: #2a241e;
+  color: var(--sand);
+}
+
+.icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.summary-figure {
+  display: flex;
+  align-items: flex-end;
+  min-height: 2.85rem;
+  margin: 1.15rem 0 0.3rem;
+  font-size: 2.85rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.summary-figure.is-status {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.summary-card h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.summary-detail,
+.library-note {
+  color: var(--muted);
+}
+
+.summary-detail {
+  margin-top: 0.3rem;
+  font-size: 0.92rem;
+}
+
+.library-panel {
+  margin-top: 1rem;
+  padding: 1.4rem 1.3rem 1.5rem;
+}
+
+.library-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.library-title {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.library-heading {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.library-note {
+  max-width: 38rem;
+  margin-top: 0.3rem;
+  font-size: 0.95rem;
+}
+
+.library-upload-note {
+  margin-top: 1rem;
+}
+
+.upload-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.85rem/1 "Segoe UI", sans-serif;
+}
+
+.library-panel .photo-catalog {
+  margin-top: 0.85rem;
+}
+
+.library-panel .photo-empty {
+  margin: 0.4rem 0 0;
+  padding: 1.35rem 0.5rem 0.4rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.library-panel .photo-card {
+  background: #151310;
+}
+
+.api-health {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.api-health h2 {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.95rem;
+}
+
+.api-health-note {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-family: "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+}
+
+.is-studio .api-health {
+  margin-top: 2.75rem;
+  color: var(--muted);
+}
+
+.is-studio .api-health h2,
+.is-studio .api-health .status-label,
+.is-studio .api-health .status-detail,
+.is-studio .api-health-note {
+  font-size: 0.82rem;
+}
+
+.is-studio .api-health .status-indicator {
+  padding: 0.55rem 0.75rem;
+  background: transparent;
+  border: 1px solid var(--line);
+}
+
+.is-studio .api-health .retry-button {
+  min-height: 2.25rem;
+  margin-top: 0.7rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 40rem) {
+  .summary-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+}
+
+@media (min-width: 48rem) {
+  .page.is-studio {
+    padding-top: 1.75rem;
+  }
+}
+
+@media (min-width: 64rem) {
+  .studio-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 1.5rem;
+  }
+
+  .studio-nav {
+    order: 0;
+    flex: initial;
+    justify-content: center;
+  }
+
+  .account {
+    order: 0;
+    justify-items: end;
+    margin-left: 0;
+    text-align: right;
   }
 }
 
