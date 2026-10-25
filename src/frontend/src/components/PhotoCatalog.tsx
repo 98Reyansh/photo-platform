@@ -13,7 +13,7 @@ import {
   type CatalogModel,
 } from '../catalog/photoCatalog'
 
-export function PhotoCatalog() {
+export function PhotoCatalog({ onModel }: { onModel?: (model: CatalogModel) => void }) {
   const [model, setModel] = useState<CatalogModel>({ status: 'loading' })
   const pending = useRef(false)
 
@@ -77,12 +77,15 @@ export function PhotoCatalog() {
     }
   }, [])
 
+  useEffect(() => {
+    onModel?.(model)
+  }, [model, onModel])
+
   const cursor = retryCursor(model)
   const loadingMore = model.status === 'ready' && model.pending
 
   return (
-    <section className="status-panel photo-catalog" aria-labelledby="photo-catalog-heading" aria-busy={model.status === 'loading' || loadingMore}>
-      <h2 id="photo-catalog-heading">Studio photos</h2>
+    <section className="photo-catalog" aria-label="Studio photos" aria-busy={model.status === 'loading' || loadingMore}>
       {model.status === 'loading' ? <p className="status-label">Loading photos…</p> : null}
       {model.status === 'empty' ? <p className="photo-empty">{emptyCatalogMessage}</p> : null}
       {model.status === 'unauthorized' ? <CatalogAlert message={sessionExpiredMessage} /> : null}

@@ -1,10 +1,16 @@
 import { useState, type FormEvent } from 'react'
-import { createCsrfMemory, signInResultMessage, signInToStudio, type SignInResult } from '../auth/session'
+import {
+  createCsrfMemory,
+  signInResultMessage,
+  signInToStudio,
+  type CurrentMembership,
+  type SignInResult,
+} from '../auth/session'
 
 const csrfMemory = createCsrfMemory()
 
 type SignInPanelProps = {
-  onSignedIn: () => void
+  onSignedIn: (membership: CurrentMembership) => void
 }
 
 export function SignInPanel({ onSignedIn }: SignInPanelProps) {
@@ -26,7 +32,7 @@ export function SignInPanel({ onSignedIn }: SignInPanelProps) {
       const next = await signInToStudio(fetch, baseUrl, email, password, csrfMemory)
       setResult(next)
       if (next.ok) {
-        onSignedIn()
+        onSignedIn(next.membership)
       }
     } catch {
       setResult({ ok: false, message: 'The API could not be reached. Check that it is running and try again.' })

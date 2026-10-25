@@ -30,7 +30,7 @@ docs/CONFIGURATION.md                           Development and production confi
 docs/SECURITY.md                                Error, logging, host, and tenancy rules
 ```
 
-`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Studio sign-in is local account membership. Authenticated photo metadata endpoints are described below. File upload and object storage are not implemented.
+`PhotoPlatform.Api` stays the HTTP host. Project references and responsibilities are recorded in `docs/ARCHITECTURE.md`. Configuration and security rules are in `docs/CONFIGURATION.md` and `docs/SECURITY.md`. Studio sign-in is local account membership. Authenticated photo metadata endpoints are described below. Upload and download endpoints are not implemented. A private local storage adapter exists and is not served over HTTP.
 
 ## Local URLs
 
@@ -68,6 +68,67 @@ dotnet run --project src/backend/PhotoPlatform.Api
 ```
 
 Leave this process running. The launch profile sets `ASPNETCORE_ENVIRONMENT=Development` and `http://localhost:5080`. The process health endpoint does not connect to PostgreSQL. The database health endpoint does, and it reports unhealthy when the database or connection string is unavailable.
+
+## Create the first studio
+
+The website has no registration page. A one-time command creates the first studio, its owner, and the membership that sign-in requires. It does not start the API. If any studio or any account already exists, it stops before it writes and creates nothing.
+
+Apply the existing migrations to the target database first. This command does not apply them. The connection string is the same `ConnectionStrings__DefaultConnection` value the API already uses. Supply it through the environment or user secrets. Do not put it in a committed file.
+
+Set these variables in the shell that runs the command. Replace every placeholder. Do not commit the values.
+
+```bash
+export PHOTO_PLATFORM_BOOTSTRAP_STUDIO_NAME="Studio name"
+export PHOTO_PLATFORM_BOOTSTRAP_STUDIO_SLUG="studio-name"
+export PHOTO_PLATFORM_BOOTSTRAP_OWNER_EMAIL="owner@example.com"
+export PHOTO_PLATFORM_BOOTSTRAP_OWNER_PASSWORD="replace-with-a-secret"
+dotnet run --project src/backend/PhotoPlatform.Api -- bootstrap
+```
+
+The slug uses lowercase letters, digits, and single hyphens. The password must satisfy the existing account policy: at least 12 characters, with an uppercase letter, a lowercase letter, a digit, and a symbol. The command does not choose a password.
+
+On success it prints that bootstrap completed, plus the studio id, slug, and owner email, and exits 0. Remove the four variables from that shell immediately:
+
+```bash
+unset PHOTO_PLATFORM_BOOTSTRAP_STUDIO_NAME
+unset PHOTO_PLATFORM_BOOTSTRAP_STUDIO_SLUG
+unset PHOTO_PLATFORM_BOOTSTRAP_OWNER_EMAIL
+unset PHOTO_PLATFORM_BOOTSTRAP_OWNER_PASSWORD
+```
+
+A later run refuses to create anything while those variables remain set, and it also refuses when a studio or account already exists. Sign in with the owner email in the existing form.
+
+If the process prints `Bootstrap completed` and then reports a shutdown failure, the studio was saved. Sign in with the owner email and remove the four variables. The non-zero exit belongs to process shutdown.
+
+If the process exits non-zero and did not print `Bootstrap completed`, the transaction was rolled back. Correct the configuration or database problem and run the command again. Do not delete rows.
+
+If the process is killed after the database commits, the next run sees the existing studio or account and refuses. Sign in, then remove the variables.
+
+Remove a bootstrap only after a read-only inspection, and only when every check below is true. If any check fails, stop and inspect manually. Do not run a delete without the ids from that inspection.
+
+```sql
+SELECT "Id", "Name", "Slug" FROM "Tenants";
+SELECT "Id", "Email" FROM "AspNetUsers";
+SELECT "Id", "UserId", "TenantId" FROM "StudioMemberships";
+SELECT COUNT(*) FROM "Photos";
+SELECT COUNT(*) FROM "AspNetUserClaims";
+SELECT COUNT(*) FROM "AspNetUserLogins";
+SELECT COUNT(*) FROM "AspNetUserTokens";
+```
+
+Continue only when `Tenants` has exactly one row, `AspNetUsers` has exactly one row, and `StudioMemberships` has exactly one row; that membership's user id and tenant id are those two rows; `Photos` is zero; and the slug and email are the bootstrap you recognize. Claim, login, and token rows must belong only to that same user id. Any other row means the state is ambiguous: stop.
+
+`StudioMemberships` and `Photos` reference `Tenants` with `ON DELETE RESTRICT`. `StudioMemberships` has no foreign key to `AspNetUsers`. Claim, login, and token rows reference `AspNetUsers` with `ON DELETE CASCADE`. Delete in this order, each statement limited to the id from the inspection. Stop if a statement affects any number of rows other than one.
+
+```sql
+DELETE FROM "StudioMemberships" WHERE "Id" = '<membership-id>';
+DELETE FROM "AspNetUsers" WHERE "Id" = '<user-id>';
+DELETE FROM "Tenants" WHERE "Id" = '<tenant-id>';
+```
+
+Deleting that user also removes claim, login, and token rows for that same user id. Do not delete from any other table, and do not omit the `WHERE` clause.
+
+Running this once against a hosted database is a separate operational choice. Supply the secret connection string in that environment and run this same command. This repository does not assume a particular host provides a one-off job.
 
 ## Start the frontend
 
@@ -116,7 +177,7 @@ Authenticated clients can manage private photo metadata. The tenant comes from t
 
 `GET /api/v1/photos` returns one page of the signed-in studio's metadata. `limit` defaults to 20 and accepts 1 through 50. `cursor` continues from the previous page. The cursor is an opaque position, and it does not select a tenant. Results are newest first. Stored fields are the photo id, tenant id, title, description, creation time, and update time. Title and description rules, CSRF, and the not-found behavior are in `docs/SECURITY.md`. The table and migration are in `docs/DATABASE-DESIGN.md`.
 
-After a successful sign-in on this page, the frontend lists that metadata and offers Load more. It sends the session cookie and does not send a tenant id or a CSRF header on this GET. It does not show image files. Refreshing the page returns to the sign-in form; the catalog is not restored from the existing cookie.
+After a successful sign-in, the Lensora studio home shows the studio name from that membership and lists the studio's photo metadata. It offers Load more when another page exists. A photo count is shown only when the returned page is complete. Collections and studio settings are marked coming soon and are not links. The list sends the session cookie and does not send a tenant id or a CSRF header on this GET. It does not show image files. Reloading the page asks `GET /api/v1/membership/current` with that cookie and restores the studio home when the session is still present. Sign out requests a fresh CSRF token and then calls `POST /api/v1/auth/sign-out`. The password, CSRF token, and session are not written to web storage. API health stays on the page and does not mean the visitor is signed in.
 
 ## PostgreSQL
 
@@ -164,7 +225,7 @@ Or, for one shell:
 export ConnectionStrings__DefaultConnection="Host=localhost;Port=5432;Database=photoplatform;Username=photoplatform;Password=YOUR_PASSWORD"
 ```
 
-The EF Core CLI is the local tool `dotnet-ef` 10.0.13, declared in `dotnet-tools.json`. Restore it from the repository root, then create or apply migrations:
+The EF Core CLI is the local tool `dotnet-ef` 10.0.13, declared in `.config/dotnet-tools.json`. Restore it from the repository root, then create or apply migrations:
 
 ```bash
 dotnet tool restore

@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PhotoPlatform.Api.Contracts;
+using PhotoPlatform.Api.Infrastructure;
 using PhotoPlatform.Application.Photos;
+using PhotoPlatform.Domain.Photos;
 
 namespace PhotoPlatform.Api.Controllers;
 
@@ -9,7 +11,10 @@ namespace PhotoPlatform.Api.Controllers;
 [Authorize]
 [Route("api/v1/photos")]
 [Produces("application/json")]
-public sealed class PhotosController(IPhotoCommands photos) : ControllerBase
+public sealed class PhotosController(
+    IPhotoCommands photos,
+    IPhotoOriginalUpload originals,
+    PhotoOriginalMultipartReader multipart) : ControllerBase
 {
     public const string NotFoundDetail = "The photo was not found.";
 
@@ -26,6 +31,65 @@ public sealed class PhotosController(IPhotoCommands photos) : ControllerBase
     {
         var result = await photos.CreateAsync(request?.Title, request?.Description, cancellationToken);
         return MapWrite(result, created: true);
+    }
+
+    [HttpPost("originals")]
+    [DisableFormValueModelBinding]
+    [RequestSizeLimit(PhotoOriginalUploadLimits.MaxRequestBytes)]
+    [RequestFormLimits(
+        MultipartBodyLengthLimit = PhotoOriginalUploadLimits.MaxRequestBytes,
+        MultipartBoundaryLengthLimit = PhotoOriginalUploadLimits.MaxBoundaryLength,
+        MultipartHeadersCountLimit = PhotoOriginalUploadLimits.MaxHeadersCount,
+        MultipartHeadersLengthLimit = PhotoOriginalUploadLimits.MaxHeadersLength,
+        ValueCountLimit = PhotoOriginalUploadLimits.MaxSections,
+        ValueLengthLimit = PhotoOriginalUploadLimits.MaxDescriptionBytes,
+        KeyLengthLimit = PhotoOriginalUploadLimits.MaxKeyLength)]
+    [ProducesResponseType(typeof(PhotoResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    public async Task<ActionResult<PhotoResponse>> UploadOriginal(CancellationToken cancellationToken)
+    {
+        string? spool = null;
+        try
+        {
+            var read = await multipart.ReadAsync(Request, cancellationToken);
+            switch (read)
+            {
+                case PhotoOriginalMultipartResult.RequestTooLarge:
+                    return RequestTooLarge();
+                case PhotoOriginalMultipartResult.Invalid invalid:
+                    return UploadInvalid(invalid.Detail);
+                case PhotoOriginalMultipartResult.Ready ready:
+                    spool = ready.SpoolPath;
+                    await using (var content = new FileStream(
+                        ready.SpoolPath,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read,
+                        PhotoOriginalUploadLimits.ReadBufferBytes,
+                        FileOptions.Asynchronous))
+                    {
+                        var uploaded = await originals.UploadAsync(
+                            ready.Title,
+                            ready.Description,
+                            content,
+                            cancellationToken);
+                        return MapUpload(uploaded);
+                    }
+                default:
+                    return Unexpected();
+            }
+        }
+        catch (BadHttpRequestException exception) when (exception.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            return RequestTooLarge();
+        }
+        finally
+        {
+            DeleteSpool(spool);
+        }
     }
 
     [HttpGet]
@@ -122,6 +186,73 @@ public sealed class PhotosController(IPhotoCommands photos) : ControllerBase
     private ActionResult MapFailure(PhotoCommandResult result)
     {
         return ProblemFor(result.Status, result.Error, "The photo details are invalid.");
+    }
+
+    private ActionResult<PhotoResponse> MapUpload(PhotoOriginalUploadResult result)
+    {
+        return result switch
+        {
+            PhotoOriginalUploadResult.Created created => Created($"/api/v1/photos/{created.Photo.Id}", created.Photo),
+            PhotoOriginalUploadResult.UnresolvedStudio => Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "Studio access was not found.",
+                detail: UnresolvedDetail),
+            PhotoOriginalUploadResult.Invalid invalid => UploadInvalid(invalid.Message),
+            PhotoOriginalUploadResult.Rejected rejected => UploadInvalid(DetailFor(rejected.Decision)),
+            _ => Unexpected(),
+        };
+    }
+
+    private static string DetailFor(PrivatePhotoContentDecision decision)
+    {
+        return decision switch
+        {
+            PrivatePhotoContentDecision.Empty => PhotoOriginalUploadLimits.EmptyFileDetail,
+            PrivatePhotoContentDecision.TooLarge => PhotoOriginalUploadLimits.FileTooLargeDetail,
+            PrivatePhotoContentDecision.Unrecognized => PhotoOriginalUploadLimits.UnsupportedFormatDetail,
+            PrivatePhotoContentDecision.Dimensions => PhotoOriginalUploadLimits.DimensionsDetail,
+            _ => PhotoOriginalUploadLimits.UnreadableImageDetail,
+        };
+    }
+
+    private ActionResult UploadInvalid(string detail)
+    {
+        return Problem(
+            statusCode: StatusCodes.Status400BadRequest,
+            title: PhotoOriginalUploadLimits.InvalidTitle,
+            detail: detail);
+    }
+
+    private ActionResult RequestTooLarge()
+    {
+        return Problem(
+            statusCode: StatusCodes.Status413PayloadTooLarge,
+            title: PhotoOriginalUploadLimits.RequestTooLargeTitle,
+            detail: PhotoOriginalUploadLimits.RequestTooLargeDetail);
+    }
+
+    private ActionResult Unexpected()
+    {
+        return Problem(
+            statusCode: StatusCodes.Status500InternalServerError,
+            title: "An unexpected error occurred.",
+            detail: "The request could not be completed.");
+    }
+
+    private static void DeleteSpool(string? path)
+    {
+        if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            System.IO.File.Delete(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 
     private ActionResult ProblemFor(PhotoCommandStatus status, string? error, string invalidTitle)

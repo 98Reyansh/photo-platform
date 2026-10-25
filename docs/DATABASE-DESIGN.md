@@ -1,6 +1,6 @@
 # Database design
 
-P0-03 adds the PostgreSQL table `Tenants`. P0-05 adds ASP.NET Core Identity account tables and `StudioMemberships`. P0-06 adds private photo metadata in `Photos`. Comments, likes, and subscriptions are not in the schema. A membership row links one user to one tenant. Photograph rows are visible only through the resolved studio. File upload and object storage are not stored.
+P0-03 adds the PostgreSQL table `Tenants`. P0-05 adds ASP.NET Core Identity account tables and `StudioMemberships`. P0-06 adds private photo metadata in `Photos`. Comments, likes, and subscriptions are not in the schema. A membership row links one user to one tenant. Photograph rows are visible only through the resolved studio. File bytes, storage keys, and original filenames are not database columns. A local filesystem adapter, when configured, keeps bytes outside the database and has no HTTP route.
 
 ## Packages
 
@@ -10,7 +10,7 @@ P0-03 adds the PostgreSQL table `Tenants`. P0-05 adds ASP.NET Core Identity acco
 | `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | 10.0.13 | `PhotoPlatform.Infrastructure` | Identity user store. No Identity UI package is referenced. |
 | `Npgsql.EntityFrameworkCore.PostgreSQL` | 10.0.3 | `PhotoPlatform.Infrastructure` | PostgreSQL provider. It accepts EF Core 10.0.4 through 10.x. |
 | `Microsoft.EntityFrameworkCore.Design` | 10.0.13 | `PhotoPlatform.Api` | Development-time migration design package. `PrivateAssets` is `all`, so it is not published with the API. |
-| `dotnet-ef` | 10.0.13 | local tool in `dotnet-tools.json` | EF Core CLI |
+| `dotnet-ef` | 10.0.13 | local tool in `.config/dotnet-tools.json` | EF Core CLI |
 
 `PhotoPlatform.Domain` does not reference EF Core or Npgsql.
 

@@ -10,7 +10,7 @@ This document records the structure introduced in P0-02. It does not define a pr
 | --- | --- |
 | `PhotoPlatform.Domain` | Domain types and rules. This project stays independent of ASP.NET Core and EF Core. It currently defines `Tenant`, `TenantStatus`, and `Photo`. |
 | `PhotoPlatform.Application` | Use cases, DTOs, and the service interfaces those use cases need. Interfaces are added with a real use case, not as placeholders. Photo commands and `PhotoResponse` live here. |
-| `PhotoPlatform.Infrastructure` | Persistence implementations. It owns `ApplicationDbContext`, the Npgsql provider, and the Tenant, membership, and Photo mappings. The Photo query filter and write boundary live with the context. File or object storage is not configured. |
+| `PhotoPlatform.Infrastructure` | Persistence implementations. It owns `ApplicationDbContext`, the Npgsql provider, and the Tenant, membership, and Photo mappings. The Photo query filter and write boundary live with the context. `LocalPrivatePhotoStore` writes an original under a configured absolute directory. That directory is not served, and the adapter is not a multi-instance store. |
 | `PhotoPlatform.Api` | HTTP host. Controllers, OpenAPI, CORS, exception handling, and dependency-injection composition stay here. |
 
 `PhotoPlatform.Api` still owns the health endpoint, Swagger/OpenAPI in Development, and the configured CORS policy. `PhotoPlatform.Api.Infrastructure` is the namespace for that host middleware. It is not the `PhotoPlatform.Infrastructure` project.
@@ -55,8 +55,12 @@ Two decisions are accepted:
 - Local accounts and password hashing use ASP.NET Core Identity. See `docs/adr/0001-aspnet-core-identity.md`.
 - The browser session uses an HTTP-only cookie, with explicit credentialed CORS, CSRF protection, and environment-specific cookie settings. See `docs/adr/0002-cookie-authentication.md`.
 
-P0-05 implements those decisions for studio membership. P0-06 uses that membership to scope private photo metadata. P0-07 lists that metadata one page at a time. Photograph file storage remains postponed.
+P0-05 implements those decisions for studio membership. P0-06 uses that membership to scope private photo metadata. P0-07 lists that metadata one page at a time. P0-08 shows that metadata in the browser after sign-in. A private local storage adapter can keep an original for a server-derived tenant id and photo id. There is no upload or download route and no cloud store. Signature recognition does not mean the file was decoded. `IPrivatePhotoDecoder` is the application contract. `SkiaPrivatePhotoDecoder` is the Infrastructure adapter and is the only type that references SkiaSharp. It accepts JPEG, PNG, and WebP after a real decode, with the encoded-size and dimension ceilings in `PrivatePhotoContentPolicy`. `ImageDecodeVerified` is true only for that successful decode.
+
+## First studio bootstrap
+
+`IStudioBootstrap` is the application contract. `StudioBootstrap` in Infrastructure creates the tenant with the domain rules, the owner with `UserManager<ApplicationUser>.CreateAsync`, and the `StudioMembership`. The API runs that command only when the process arguments are exactly `bootstrap`. The command does not start the website, does not add a route, and does not apply migrations. Tenant creation, the Identity save, and the membership save share one read-committed transaction on `ApplicationDbContext`. On PostgreSQL that transaction takes `pg_advisory_xact_lock` on its own connection before the final existence check and holds the lock until commit or rollback. SQLite tests do not take that lock.
 
 ## Postponed
 
-Uploads, object storage, storage keys, original filenames, and public file URLs remain later tasks. They are not part of the accepted authentication decisions. This document does not define a production deployment.
+HTTP upload and download, Cloudflare R2, signed URLs, storage keys in API responses, original filenames, public file URLs, schema changes for file metadata, and production deployment remain later tasks. Static files are not enabled. The bounded decoder is in place for a later upload endpoint: 25 MiB encoded, 40 megapixels, and a long edge of 12,000 pixels. This document does not define a production deployment. The Linux native Skia asset has not been run on Render.com.
